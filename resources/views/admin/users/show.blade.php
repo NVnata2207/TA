@@ -13,10 +13,12 @@
                 <tr><th>Status</th><td>{{ $user->status_pendaftaran }}</td></tr>
                 <tr><th>Hasil</th><td>{{ $user->hasil }}</td></tr>
                 <tr><th>Daftar Ulang</th><td>{{ $user->daftar_ulang }}</td></tr>
-                <!-- Tambahkan field lain sesuai kebutuhan -->
             </table>
         </div>
     </div>
+
+<!-- Tambahkan field lain sesuai kebutuhan -->
+ 
     <div class="card mb-4">
         <div class="card-header fw-bold">Berkas Pendukung</div>
         <div class="card-body">

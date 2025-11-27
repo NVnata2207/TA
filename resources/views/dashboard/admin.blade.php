@@ -4,7 +4,7 @@
 <div class="row mb-3">
     <div class="col-12">
         <div class="alert alert-info p-2">
-            <b>e-PPDB SMPN 1 TUMIJAJAR</b><br>
+            <b>E-PPDB Yayasan Insan Madani Mulia Madiun</b><br>
             @if($activeYear)
                 Jadwal PPDB : {{ \Carbon\Carbon::parse($activeYear->mulai_pendaftaran)->format('d M Y') }} s.d. {{ \Carbon\Carbon::parse($activeYear->selesai_pendaftaran)->format('d M Y') }},
                 Seleksi/Ujian : {{ \Carbon\Carbon::parse($activeYear->mulai_seleksi)->format('d M Y') }} s.d. {{ \Carbon\Carbon::parse($activeYear->selesai_seleksi)->format('d M Y') }},
@@ -20,7 +20,7 @@
     <div class="col-md-3 col-6">
         <div class="small-box bg-info">
             <div class="inner">
-                <h3>1</h3>
+                <h3>0</h3>
                 <p>ZONASI</p>
                 <span>Kuota 173</span>
             </div>
@@ -62,11 +62,10 @@
     <div class="col-md-3 col-6">
         <div class="small-box bg-cyan">
             <div class="inner">
-                <h3>1</h3>
+                <h3>0</h3>
                 <p>Total Pendaftar</p>
             </div>
             <div class="icon"><i class="fas fa-users"></i></div>
-            <a href="#" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
         </div>
     </div>
     <div class="col-md-3 col-6">
@@ -76,17 +75,15 @@
                 <p>Pendaftar Baru</p>
             </div>
             <div class="icon"><i class="fas fa-user-plus"></i></div>
-            <a href="#" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
         </div>
     </div>
     <div class="col-md-3 col-6">
         <div class="small-box bg-teal">
             <div class="inner">
-                <h3>1</h3>
+                <h3>0</h3>
                 <p>Pendaftar sudah diverifikasi</p>
             </div>
             <div class="icon"><i class="fas fa-user-check"></i></div>
-            <a href="#" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
         </div>
     </div>
     <div class="col-md-3 col-6">
@@ -96,7 +93,6 @@
                 <p>Berkas kurang/tidak sesuai</p>
             </div>
             <div class="icon"><i class="fas fa-file-alt"></i></div>
-            <a href="#" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
         </div>
     </div>
 </div>

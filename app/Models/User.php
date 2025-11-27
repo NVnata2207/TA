@@ -2,15 +2,16 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens; // Dihapus, sesuai kode baru Anda
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable; // HasApiTokens dihapus, ini sudah benar
 
     /**
      * The attributes that are mass assignable.
@@ -22,11 +23,12 @@ class User extends Authenticatable
         'nisn',
         'email',
         'password',
-        'kode_pendaftaran',
+        'kode_pendaftaran', // Dari kode baru Anda
         'status_pendaftaran',
         'hasil',
-        'daftar_ulang',
+        'daftar_ulang',     // Dari kode baru Anda
         'academic_year_id',
+        'role',             // DITAMBAHKAN KEMBALI: Ini penting untuk AuthController Anda
     ];
 
     /**
@@ -41,6 +43,7 @@ class User extends Authenticatable
 
     /**
      * Get the attributes that should be cast.
+     * (Ini sintaks baru Laravel 10+, sudah benar)
      *
      * @return array<string, string>
      */
@@ -52,6 +55,10 @@ class User extends Authenticatable
         ];
     }
 
+    /**
+     * Fungsi boot() untuk membuat kode_pendaftaran secara otomatis.
+     * (Ini dari kode baru Anda, sudah benar)
+     */
     protected static function boot()
     {
         parent::boot();
@@ -65,8 +72,22 @@ class User extends Authenticatable
         });
     }
 
+    /**
+     * Relasi ke AcademicYear.
+     * (Saya gunakan versi yang lebih eksplisit dengan foreign key)
+     */
     public function academicYear()
     {
-        return $this->belongsTo(AcademicYear::class);
+        return $this->belongsTo(AcademicYear::class, 'academic_year_id');
+    }
+
+    /**
+     * DITAMBAHKAN KEMBALI: Relasi ke ExamAnswer.
+     * Ini diperlukan oleh logika 'Auto Reject' di userDashboard Anda.
+     */
+    public function examAnswers()
+    {
+        return $this->hasMany(ExamAnswer::class, 'user_id');
     }
 }
+

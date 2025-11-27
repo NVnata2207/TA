@@ -69,42 +69,51 @@ class AuthController extends Controller
             return redirect()->route('login')->with('error', 'Kuota pendaftaran sudah habis.');
         }
 
+        // LOGIKA ADMIN (Jarang dipakai registrasi publik, tapi kita perbaiki juga)
         if ($request->role === 'admin') {
             $request->validate([
                 'nisn' => 'required|string|unique:users',
                 'password' => 'required|string|min:6|confirmed',
                 'role' => 'required|in:admin,user',
+                 // Admin biasanya tidak wajib email di awal, tapi kalau mau diisi boleh
             ]);
             $user = User::create([
-                'name' => '',
+                'name' => 'Administrator', // Kasih nama default biar tidak error
                 'nisn' => $request->nisn,
                 'password' => Hash::make($request->password),
                 'role' => 'admin',
-                'email' => '',
+                'email' => $request->email ?? null, // <--- UBAH INI (Ambil dari request, atau null)
                 'academic_year_id' => $academic_year_id,
                 'status_pendaftaran' => 'Pendaftar Baru',
             ]);
+
+        // LOGIKA USER / PENDAFTAR SISWA (INI YANG PENTING)
         } else {
             $request->validate([
                 'name' => 'required|string|max:255',
+                'email' => 'required|email|unique:users', // <--- TAMBAHKAN VALIDASI INI
                 'nisn' => 'required|string|unique:users',
                 'password' => 'required|string|min:6|confirmed',
                 'role' => 'required|in:admin,user',
             ]);
+            
             $user = User::create([
                 'name' => $request->name,
                 'nisn' => $request->nisn,
                 'password' => Hash::make($request->password),
                 'role' => 'user',
-                'email' => '',
+                'email' => $request->email, // <--- UBAH INI (Jangan dikosongkan lagi!)
                 'academic_year_id' => $academic_year_id,
                 'status_pendaftaran' => 'Pendaftar Baru',
             ]);
         }
+
         if ($activeYear && $activeYear->kuota !== null && $activeYear->kuota > 0) {
             $activeYear->decrement('kuota');
         }
+
         Auth::login($user);
+
         if ($user->role === 'admin') {
             return redirect()->route('dashboard.admin');
         } else {
@@ -149,4 +158,41 @@ class AuthController extends Controller
         auth()->logout();
         return redirect()->route('login');
     }
+
+// ... di dalam method controller Anda (misalnya: index)
+
+    public function index(Request $request)
+    {
+    // 1. Ambil kata kunci pencarian dari request
+    // 'search' adalah nama input di form Anda
+    $kataKunci = $request->input('search');
+
+    // 2. Mulai query ke database
+    $query = User::query();
+
+    // 3. Jika ada kata kunci, tambahkan filter 'where'
+    if ($kataKunci) {
+        // 'LIKE' digunakan untuk mencari sebagian kata
+        // '%' adalah wildcard, artinya "apapun"
+        // "%winata%" berarti mencari apapun yang mengandung "winata"
+        $query->where('name', 'LIKE', '%' . $kataKunci . '%');
+    }
+
+    // 4. Ambil datanya (misal: 10 per halaman)
+    $users = $query->paginate(10);
+
+    // 5. Kirim data ke view
+    return view('admin.users.index', [
+        'users' => $users,
+        'kataKunci' => $kataKunci // Untuk menampilkan kembali di kotak search
+    ]);
+}
+
+
+
+
+
+
+
+
 } 

@@ -1,5 +1,5 @@
 @extends('layouts.admin')
-@section('page_title', 'Pengaturan Formulir Pendaftaran')
+@section('page_title', 'Cek Berkas Formulir Pendaftaran')
 @section('content')
 <style>
     .category-label {

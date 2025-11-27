@@ -1,16 +1,18 @@
 @extends('layouts.admin')
-@section('page_title', 'Peserta')
+@section('page_title', 'Peserta Pendaftar')
 @section('content')
 <div class="card shadow mb-4">
     <div class="card-header d-flex justify-content-between align-items-center bg-white border-bottom">
         <span class="fw-bold">List Peserta</span>
         <div>
-            <a href="#" class="btn btn-success btn-sm me-1"><i class="fa fa-plus"></i> Tambah</a>
-            <button class="btn btn-danger btn-sm me-1"><i class="fa fa-trash"></i> Hapus Data Terpilih</button>
-            <button class="btn btn-warning btn-sm text-white me-1"><i class="fa fa-undo"></i> Reset Hasil</button>
-            <button class="btn btn-success btn-sm me-1"><i class="fa fa-check"></i> Terima semua</button>
+            {{-- Tambahkan onclick="confirmBulkDelete()" agar tombol ini memanggil fungsi Javascript --}}
+            <button class="btn btn-danger btn-sm me-1" onclick="confirmBulkDelete()">
+                <i class="fa fa-trash"></i> Hapus Data Terpilih
+            </button>
             <button class="btn btn-warning btn-sm text-white me-1"><i class="fa fa-download"></i> Unduh Rekap Nilai</button>
-            <button class="btn btn-primary btn-sm"><i class="fa fa-download"></i> Unduh Rekap Peserta Excel</button>
+            <a href="{{ route('users.export_excel') }}" class="btn btn-primary btn-sm" target="_blank">
+                <i class="fa fa-download"></i> Unduh Rekap Peserta Excel
+            </a>
         </div>
     </div>
     <div class="card-body p-0">
@@ -44,6 +46,8 @@
                     @forelse($users as $user)
                     <tr>
                         <td class="text-center">
+                            {{-- >>> LETAKNYA DI SINI <<< --}}
+                            {{-- Pastikan class-nya 'user-checkbox' agar terbaca oleh JavaScript --}}
                             <input type="checkbox" class="form-check-input user-checkbox" value="{{ $user->id }}">
                         </td>
                         <td><span class="badge bg-info">{{ $user->kode_pendaftaran }}</span></td>
@@ -84,7 +88,6 @@
                         </td>
                         <td>
                             <a href="{{ route('users.show', $user->id) }}" class="btn btn-sm btn-primary" title="Lihat Detail"><i class="fa fa-search"></i></a>
-                            <a href="{{ route('users.edit', $user) }}" class="btn btn-warning btn-sm" title="Edit"><i class="fa fa-edit"></i></a>
                             <form method="POST" action="{{ route('users.destroy', $user) }}" class="d-inline" onsubmit="return confirm('Yakin hapus?')">
                                 @csrf @method('DELETE')
                                 <button class="btn btn-danger btn-sm" title="Hapus"><i class="fa fa-trash"></i></button>
@@ -122,5 +125,49 @@ document.querySelectorAll('.user-status-form').forEach(function(form) {
     select.addEventListener('change', toggleComment);
     toggleComment();
 });
+</script>
+{{-- FORM RAHASIA: Ini yang bertugas mengirim perintah hapus ke Controller --}}
+<form id="bulk-delete-form" action="{{ route('users.bulk_delete') }}" method="POST" style="display: none;">
+    @csrf
+    @method('DELETE')
+    <input type="hidden" name="ids" id="bulk-delete-ids">
+</form>
+
+<script>
+    // Fungsi yang dipanggil saat tombol merah diklik
+    function confirmBulkDelete() {
+        // 1. Cari semua checkbox yang dicentang (pastikan checkbox di tabel punya class 'user-checkbox')
+        let checkedBoxes = document.querySelectorAll('.user-checkbox:checked');
+        let ids = [];
+
+        // 2. Masukkan ID dari setiap checkbox ke dalam array
+        checkedBoxes.forEach(function(checkbox) {
+            ids.push(checkbox.value);
+        });
+
+        // 3. Cek apakah ada data yang dipilih
+        if (ids.length === 0) {
+            alert('Silakan pilih (centang) data peserta yang ingin dihapus terlebih dahulu.');
+            return;
+        }
+
+        // 4. Konfirmasi penghapusan
+        if (confirm('Apakah Anda yakin ingin menghapus ' + ids.length + ' data terpilih? Data yang dihapus tidak bisa dikembalikan.')) {
+            // 5. Masukkan ID ke dalam form rahasia
+            document.getElementById('bulk-delete-ids').value = ids.join(',');
+            
+            // 6. Kirim form
+            document.getElementById('bulk-delete-form').submit();
+        }
+    }
+    
+    // Fitur Tambahan: Checkbox "Pilih Semua" (Select All)
+    // Pastikan checkbox di header tabel memiliki id="select-all"
+    document.getElementById('select-all')?.addEventListener('change', function(e) {
+        let checkboxes = document.querySelectorAll('.user-checkbox');
+        checkboxes.forEach(function(checkbox) {
+            checkbox.checked = e.target.checked;
+        });
+    });
 </script>
 @endsection 

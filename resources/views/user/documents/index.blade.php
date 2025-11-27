@@ -1,74 +1,120 @@
 @extends('layouts.admin')
-@section('page_title', 'Upload Berkas Pendukung')
+@section('page_title', 'Upload Berkas')
+
 @section('content')
+
+{{-- 1. LOGIKA PENGUNCI (LOCK) --}}
 @php
-$user = auth()->user();
-$activeYear = \App\Models\AcademicYear::where('is_active', 1)->first();
+    $user = auth()->user();
+    // Cek apakah status sudah final
+    $isLocked = ($user->hasil === 'Di Terima' || $user->hasil === 'Tidak Diterima');
 @endphp
-@if($user->status_pendaftaran === 'Sudah Diverifikasi')
-    <div class="modal show d-block" tabindex="-1" style="background:rgba(0,0,0,0.2);">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header bg-success text-white">
-                    <h5 class="modal-title">Upload Berkas Ditutup</h5>
-                </div>
-                <div class="modal-body">
-                    <p>Berkas Anda sudah diverifikasi. Silakan menunggu jadwal Seleksi/Ujian:</p>
-                    <ul>
-                        <li><b>Mulai Seleksi/Ujian:</b> {{ $activeYear ? \Carbon\Carbon::parse($activeYear->mulai_seleksi)->format('d M Y') : '-' }}</li>
-                        <li><b>Selesai Seleksi/Ujian:</b> {{ $activeYear ? \Carbon\Carbon::parse($activeYear->selesai_seleksi)->format('d M Y') : '-' }}</li>
-                    </ul>
-                </div>
+
+    {{-- Alert Sukses/Error --}}
+    @if(session('success'))
+        <div class="alert alert-success alert-dismissible fade show">
+            {{ session('success') }}
+            <button type="button" class="close" data-dismiss="alert">&times;</button>
+        </div>
+    @endif
+
+    @if($errors->any())
+        <div class="alert alert-danger">
+            <ul class="mb-0">
+                @foreach($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
+    {{-- 2. PESAN PERINGATAN JIKA TERKUNCI --}}
+    @if($isLocked)
+        <div class="alert alert-warning shadow-sm border-left-warning">
+            <i class="fas fa-lock fa-lg me-2"></i> 
+            <b>Akses Ditutup:</b> Masa seleksi telah berakhir (Status: <b>{{ $user->hasil }}</b>). Anda tidak dapat mengubah atau menghapus berkas lagi.
+        </div>
+    @endif
+
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Upload Berkas Pendukung</h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered" width="100%" cellspacing="0">
+                    <thead>
+                        <tr>
+                            <th>Nama Dokumen</th>
+                            <th style="width: 15%;">Status</th>
+                            <th style="width: 40%;">Upload/Ganti</th>
+                            <th style="width: 10%;">Hapus</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($types as $typeKey => $typeName)
+                        <tr>
+                            <td style="vertical-align: middle;">{{ $typeName }}</td>
+                            
+                            {{-- Status Upload --}}
+                            <td style="vertical-align: middle;">
+                                @if(isset($documents[$typeKey]))
+                                    <span class="badge bg-success">Sudah diupload</span>
+                                    <br>
+                                    <small><a href="{{ asset('storage/'.$documents[$typeKey]->file_path) }}" target="_blank">Lihat File</a></small>
+                                @else
+                                    <span class="badge bg-secondary">Belum ada</span>
+                                @endif
+                            </td>
+
+                            {{-- Form Upload --}}
+                            <td style="vertical-align: middle;">
+                                <form action="{{ route('user.documents.store') }}" method="POST" enctype="multipart/form-data" class="d-flex">
+                                    @csrf
+                                    <input type="hidden" name="type" value="{{ $typeKey }}">
+                                    
+                                    {{-- INPUT FILE --}}
+                                    {{-- Jika Locked, tambahkan atribut 'disabled' --}}
+                                    <input type="file" name="file" class="form-control form-control-sm me-2" accept=".pdf" required 
+                                        {{ $isLocked ? 'disabled' : '' }}>
+                                    
+                                    {{-- TOMBOL UPLOAD --}}
+                                    <button type="submit" class="btn btn-primary btn-sm" {{ $isLocked ? 'disabled' : '' }}>
+                                        @if($isLocked) 
+                                            <i class="fas fa-lock"></i> 
+                                        @else 
+                                            Upload 
+                                        @endif
+                                    </button>
+                                </form>
+                            </td>
+
+                            {{-- Tombol Hapus --}}
+                            <td style="vertical-align: middle; text-align: center;">
+                                @if(isset($documents[$typeKey]))
+                                    <form action="{{ route('user.documents.destroy', $typeKey) }}" method="POST" onsubmit="return confirm('Yakin ingin menghapus berkas ini?')">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-danger btn-sm" {{ $isLocked ? 'disabled' : '' }}>
+                                            Hapus
+                                        </button>
+                                    </form>
+                                @endif
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+            <div class="mt-3">
+                <small class="text-muted">* Format file wajib <b>PDF</b>. Maksimal ukuran file <b>2MB</b>.</small>
             </div>
         </div>
     </div>
-@else
-<div class="container">
-    <h3 class="mb-3">Upload Berkas Pendukung</h3>
-    @if(session('success'))
-        <div class="alert alert-success">{{ session('success') }}</div>
-    @endif
-    <table class="table table-bordered bg-white">
-        <thead>
-            <tr>
-                <th>Nama Dokumen</th>
-                <th>Status</th>
-                <th>Upload/Ganti</th>
-                <th>Hapus</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach($types as $type => $label)
-            <tr>
-                <td>{{ $label }}</td>
-                <td>
-                    @if(isset($documents[$type]))
-                        <a href="{{ asset('storage/'.$documents[$type]->file_path) }}" target="_blank" class="badge bg-success">Sudah diupload</a>
-                    @else
-                        <span class="badge bg-secondary">Belum ada</span>
-                    @endif
-                </td>
-                <td>
-                    <form method="POST" action="{{ route('user.documents.store') }}" enctype="multipart/form-data" style="display:inline-block">
-                        @csrf
-                        <input type="hidden" name="type" value="{{ $type }}">
-                        <input type="file" name="file" accept="application/pdf" required style="display:inline-block;width:180px">
-                        <button type="submit" class="btn btn-sm btn-primary">Upload</button>
-                    </form>
-                </td>
-                <td>
-                    @if(isset($documents[$type]))
-                        <form method="POST" action="{{ route('user.documents.destroy', $type) }}" style="display:inline-block">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Hapus dokumen ini?')">Hapus</button>
-                        </form>
-                    @endif
-                </td>
-            </tr>
-            @endforeach
-        </tbody>
-    </table>
+    
+    <a href="{{ route('dashboard.user') }}" class="btn btn-secondary mb-3">
+        <i class="fas fa-arrow-left"></i> Kembali ke Dashboard
+    </a>
+
 </div>
-@endif
-@endsection 
+@endsection

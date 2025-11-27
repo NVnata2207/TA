@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>e-PPDB Admin</title>
+    <title>@yield('page_title', 'e-PPDB Admin')</title>
     <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- AdminLTE 3 -->
@@ -13,14 +13,14 @@
         html, body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif !important;
         }
-        .brand-link { background: #6c63ff !important; color: #fff !important; }
-        .main-header { background: #6c63ff !important; color: #fff !important; }
-        .sidebar-dark-primary { background: #22223b !important; }
+        .brand-link { background: #90C67C !important; color: #fff !important; }
+        .main-header { background: #90C67C !important; color: #fff !important; }
+        .sidebar-dark-primary { background: #328E6E !important; }
         .user-panel .image img { object-fit: cover; }
         .content-header { padding: 1rem 1.5rem 0.5rem 1.5rem; }
         .content-wrapper { background: #f4f6f9; }
         .nav-sidebar .nav-link.active, .nav-sidebar .nav-link:hover {
-            background: #6c63ff !important;
+            background: #90C67C !important;
             color: #fff !important;
             transition: background 0.2s, color 0.2s;
         }
@@ -36,6 +36,8 @@
             .sidebar { padding-bottom: 60px; }
         }
     </style>
+    {{-- Ini akan memuat style khusus dari halaman 'Data Peserta' --}}
+    @stack('styles')
 </head>
 <body class="hold-transition sidebar-mini layout-fixed">
 <div class="wrapper">
@@ -92,16 +94,19 @@
     <!-- Main Sidebar Container -->
     <aside class="main-sidebar sidebar-dark-primary elevation-4">
         <a href="#" class="brand-link text-center">
-            <span class="brand-text font-weight-light">e-PPDB</span>
+            <span class="brand-text font-weight-light">E-PPDB</span>
         </a>
         <div class="sidebar">
             <div class="user-panel mt-3 pb-3 mb-3 d-flex">
                 <div class="image">
-                    <img src="https://ui-avatars.com/api/?name={{ urlencode(auth()->user()->name ?: 'Admin utama') }}&background=6c63ff&color=fff" class="img-circle elevation-2" alt="User Image">
+                    <img src="https://ui-avatars.com/api/?name={{ urlencode(auth()->user()->name ?: 'Admin utama') }}&background=90C67C&color=fff" class="img-circle elevation-2" alt="User Image">
                 </div>
                 <div class="info">
                     <a href="#" class="d-block">{{ auth()->user()->name ?: 'Admin utama' }}</a>
-                    <span class="text-success small"><i class="fas fa-circle"></i> Online</span>
+                    {{-- SAYA PERBAIKI TYPO DI SINI --}}
+                    <span class="small" style="color: #90C67C;">
+                        <i class="fas fa-circle"></i> Online
+                    </span>
                 </div>
             </div>
             <!-- Sidebar Menu -->
@@ -158,38 +163,40 @@
                             </a>
                         </li>
                         <li class="nav-item">
-    <a class="nav-link {{ request()->routeIs('user.exam.*') ? 'active' : '' }}" href="{{ route('user.exam.index') }}">
-        <i class="fas fa-file-alt"></i>
-        <span>Halaman Ujian</span>
-    </a>
-</li> 
+                            <a class="nav-link {{ request()->routeIs('user.exam.*') ? 'active' : '' }}" href="{{ route('user.exam.index') }}">
+                                <i class="fas fa-file-alt"></i>
+                                <span>Halaman Ujian</span>
+                            </a>
+                        </li> 
                         @endif
                     @endif
                 </ul>
             </nav>
             <!-- /.sidebar-menu -->
         </div>
-     </aside>
+    </aside>
     <!-- Content Wrapper. Contains page content -->
     <div class="content-wrapper">
         <div class="content-header">
             <div class="container-fluid">
+                {{-- Ini akan memuat judul dari 'Data Peserta' --}}
                 <h1 class="m-0 pb-2 border-bottom">@yield('page_title', 'Dashboard')</h1>
             </div>
         </div>
         <section class="content">
             <div class="container-fluid">
+                {{-- Ini adalah tempat 'Data Peserta' akan disisipkan --}}
                 @yield('content')
             </div>
         </section>
     </div>
     <!-- /.content-wrapper -->
-    <footer class="main-footer text-center small">
-        <strong>Copyright &copy; 2025 Adrian Project.</strong> All rights reserved. <span class="float-right">Version 1.5.3 Raya</span>
-    </footer>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/js/adminlte.min.js"></script>
+
+{{-- Ini akan memuat script khusus dari halaman 'Data Peserta' --}}
+@stack('scripts')
 </body>
-</html> 
+</html>

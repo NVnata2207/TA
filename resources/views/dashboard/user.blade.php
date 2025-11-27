@@ -1,19 +1,35 @@
 @extends('layouts.admin')
+
+{{-- 1. PERBAIKAN: DEFINISI VARIABEL DI SINI --}}
+@php
+    // Cek status akhir
+    $isLocked = ($user->hasil === 'Di Terima' || $user->hasil === 'Tidak Diterima');
+    // Cek status khusus cetak bukti (hanya jika diterima)
+    $bisaCetak = ($user->hasil === 'Di Terima');
+@endphp
+
 @section('page_title', 'Dashboard')
 @section('content')
+
+{{-- Alert Sukses/Error --}}
 @if(session('success'))
     <div class="alert alert-success">{{ session('success') }}</div>
 @endif
 @if(session('error'))
     <div class="alert alert-danger">{{ session('error') }}</div>
 @endif
+
+{{-- MODAL LULUS --}}
 @if($user->hasil === 'Di Terima')
     @php $activeYear = \App\Models\AcademicYear::where('is_active', 1)->first(); @endphp
-    <div class="modal show d-block" tabindex="-1" style="background:rgba(0,0,0,0.2);">
-        <div class="modal-dialog modal-dialog-centered">
+    <div id="modalLulus" class="modal show" tabindex="-1" role="dialog" style="display: block; background-color: rgba(0,0,0,0.5); padding-right: 17px;">
+        <div class="modal-dialog modal-dialog-centered" role="document">
             <div class="modal-content">
                 <div class="modal-header bg-success text-white">
-                    <h5 class="modal-title">Selamat, Anda Lulus Seleksi!</h5>
+                    <h5 class="modal-title">Selamat, Anda Lulus Seleksi</h5>
+                    <button type="button" class="close" onclick="document.getElementById('modalLulus').style.display='none'" aria-label="Close" style="color: white; opacity: 1;">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
                 </div>
                 <div class="modal-body">
                     <p>Anda dinyatakan <b>LULUS</b> seleksi PPDB.</p>
@@ -27,12 +43,17 @@
         </div>
     </div>
 @endif
+
+{{-- MODAL TIDAK LULUS --}}
 @if($user->hasil === 'Tidak Diterima')
-    <div class="modal show d-block" tabindex="-1" style="background:rgba(0,0,0,0.2);">
-        <div class="modal-dialog modal-dialog-centered">
+    <div id="modalTidakLulus" class="modal show" tabindex="-1" role="dialog" style="display: block; background:rgba(0,0,0,0.5); padding-right: 17px;">
+        <div class="modal-dialog modal-dialog-centered" role="document">
             <div class="modal-content">
                 <div class="modal-header bg-danger text-white">
                     <h5 class="modal-title">Maaf, Anda Belum Lulus Seleksi</h5>
+                    <button type="button" class="close" onclick="document.getElementById('modalTidakLulus').style.display='none'" aria-label="Close" style="color: white; opacity: 1;">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
                 </div>
                 <div class="modal-body">
                     <p>Mohon maaf, Anda <b>TIDAK LULUS</b> seleksi PPDB tahun ini.</p>
@@ -42,24 +63,29 @@
         </div>
     </div>
 @endif
+
+{{-- INFO JADWAL --}}
 <div class="row mb-3">
     <div class="col-12">
         <div class="alert alert-info p-2">
-            <b>e-PPDB SMPN 1 TUMIJAJAR</b>
+            <b>E-PPDB Yayasan Insan Madani Mulia Madiun</b>
         </div>
         <div class="alert" style="background:#00bcd4;color:#fff;">
-            @if($activeYear)
+            @if(isset($activeYear) && $activeYear)
                 Jadwal PPDB : {{ \Carbon\Carbon::parse($activeYear->mulai_pendaftaran)->format('d M Y') }} s.d. {{ \Carbon\Carbon::parse($activeYear->selesai_pendaftaran)->format('d M Y') }},
                 Seleksi/Ujian : {{ \Carbon\Carbon::parse($activeYear->mulai_seleksi)->format('d M Y') }} s.d. {{ \Carbon\Carbon::parse($activeYear->selesai_seleksi)->format('d M Y') }},
                 Pengumuman : {{ \Carbon\Carbon::parse($activeYear->tanggal_pengumuman)->format('d M Y') }},
                 Daftar Ulang : {{ \Carbon\Carbon::parse($activeYear->mulai_daftar_ulang)->format('d M Y') }} s.d. {{ \Carbon\Carbon::parse($activeYear->selesai_daftar_ulang)->format('d M Y') }}
             @else
-                Tidak ada tahun ajaran aktif.
+                Tidak ada tahun ajaran aktif atau data belum dimuat.
             @endif
         </div>
     </div>
 </div>
+
+{{-- TOMBOL AKSI UTAMA (Formulir, Berkas, Cetak) --}}
 <div class="row mb-3">
+    {{-- CARD 1: FORMULIR --}}
     <div class="col-md-3 col-6 mb-3">
         <div class="card text-white" style="background:#20cfcf;">
             <div class="card-body">
@@ -70,24 +96,20 @@
                         <div>Pendaftaran</div>
                     </div>
                 </div>
-                <a href="{{ route('user.downloadRegistrationForm') }}" class="btn btn-light btn-sm w-100" target="_blank">Download Formulir PDF <i class="fa fa-download"></i></a>
+                @if($isLocked)
+                    <button class="btn btn-light btn-sm w-100 disabled" style="opacity: 0.7; cursor: not-allowed;">
+                        <i class="fas fa-lock"></i> Pendaftaran Selesai
+                    </button>
+                @else
+                    <a href="{{ route('user.downloadRegistrationForm') }}" class="btn btn-light btn-sm w-100" target="_blank">
+                        Download Formulir PDF <i class="fa fa-download"></i>
+                    </a>
+                @endif
             </div>
         </div>
     </div>
-    <div class="col-md-3 col-6 mb-3">
-        <div class="card text-white" style="background:#6c63ff;">
-            <div class="card-body">
-                <div class="d-flex align-items-center mb-2">
-                    <i class="fas fa-graduation-cap fa-2x me-2"></i>
-                    <div>
-                        <div class="fw-bold" style="font-size:1.3rem;">Prestasi</div>
-                        <div>Peserta</div>
-                    </div>
-                </div>
-                <a href="#" class="btn btn-light btn-sm w-100">Tambah Prestasi <i class="fa fa-arrow-right"></i></a>
-            </div>
-        </div>
-    </div>
+
+    {{-- CARD 2: BERKAS --}}
     <div class="col-md-3 col-6 mb-3">
         <div class="card text-white" style="background:#ff9800;">
             <div class="card-body">
@@ -98,26 +120,50 @@
                         <div>Pendukung</div>
                     </div>
                 </div>
-                <a href="{{ route('user.documents.index') }}" class="btn btn-light btn-sm w-100">Upload Berkas <i class="fa fa-upload"></i></a>
+                @if($isLocked)
+                    <button class="btn btn-light btn-sm w-100 disabled" style="opacity: 0.7; cursor: not-allowed;">
+                        <i class="fas fa-lock"></i> Akses Ditutup
+                    </button>
+                @else
+                    <a href="{{ route('user.documents.index') }}" class="btn btn-light btn-sm w-100">
+                        Upload Berkas <i class="fa fa-upload"></i>
+                    </a>
+                @endif
             </div>
         </div>
     </div>
+
+    {{-- CARD 3: CETAK BUKTI --}}
     <div class="col-md-3 col-6 mb-3">
         <div class="card text-white" style="background:#0288d1;">
             <div class="card-body">
                 <div class="d-flex align-items-center mb-2">
                     <i class="fas fa-print fa-2x me-2"></i>
                     <div>
-                        <div class="fw-bold" style="font-size:1.3rem;">Belum bisa</div>
-                        <div>Cetak Bukti Pendaftaran</div>
+                        <div class="fw-bold" style="font-size:1.3rem;">{{ $bisaCetak ? 'Cetak' : 'Belum bisa' }}</div>
+                        <div>Bukti Pendaftaran</div>
                     </div>
                 </div>
-                <a href="#" class="btn btn-light btn-sm w-100 disabled">Cetak Bukti Pendaftaran <i class="fa fa-print"></i></a>
+                
+                {{-- PERBAIKAN DI SINI: MENGGUNAKAN ROUTE YANG BENAR --}}
+                @if($bisaCetak)
+                    <a href="{{ route('user.print_acceptance') }}" class="btn btn-light btn-sm w-100">
+                        Cetak Bukti <i class="fa fa-print"></i>
+                    </a>
+                @else
+                    <a href="#" class="btn btn-light btn-sm w-100 disabled" style="opacity: 0.7;">
+                        Belum tersedia <i class="fa fa-print"></i>
+                    </a>
+                @endif
+                
             </div>
         </div>
     </div>
 </div>
+
+{{-- LAYOUT BAWAH (Pengumuman & Info Akun) --}}
 <div class="row mb-3">
+    {{-- KOLOM KIRI: PENGUMUMAN --}}
     <div class="col-md-8 mb-3">
         <div class="card">
             <div class="card-header bg-white border-bottom d-flex align-items-center">
@@ -146,7 +192,10 @@
             </div>
         </div>
     </div>
+
+    {{-- KOLOM KANAN: INFO NOMOR & KONTAK & UJIAN --}}
     <div class="col-md-4 mb-3">
+        {{-- Card Nomor Pendaftaran --}}
         <div class="card mb-3" style="background:#e91e63;color:#fff;">
             <div class="card-body text-center">
                 <div class="fw-bold mb-2">Nomer Pendaftaran</div>
@@ -155,31 +204,47 @@
                 </div>
             </div>
         </div>
-        <div class="card">
+
+        {{-- Card Kontak --}}
+        <div class="card mb-3">
             <div class="card-body">
                 <div class="fw-bold mb-2"><i class="fas fa-phone-alt"></i> Contact Panitia PPDB</div>
                 <div class="mb-1"><i class="fas fa-user"></i> - Panitia PPDB</div>
                 <div><i class="fas fa-envelope"></i> - info@ppdb.com</div>
             </div>
         </div>
-    </div>
-</div>
-<div class="col-md-4">
-    <div class="card">
-        <div class="card-body">
-            <h5 class="card-title">Halaman Ujian</h5>
-            <p class="card-text">Akses halaman ujian untuk mengunduh soal dan mengupload jawaban.</p>
-            <a href="{{ route('user.exam.index') }}" class="btn btn-primary">
-                <i class="fas fa-file-alt"></i> Masuk ke Halaman Ujian
-            </a>
+
+        {{-- Card Halaman Ujian --}}
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Halaman Ujian</h5>
+                <p class="card-text small">Akses halaman ujian untuk mengunduh soal dan mengupload jawaban.</p>
+                @if($isLocked)
+                    <button class="btn btn-secondary w-100 disabled">
+                        <i class="fas fa-lock"></i> Ujian Selesai
+                    </button>
+                @else
+                    <a href="{{ route('user.exam.index') }}" class="btn btn-primary w-100">
+                        <i class="fas fa-file-alt"></i> Masuk ke Halaman Ujian
+                    </a>
+                @endif
+            </div>
         </div>
+
     </div>
 </div>
+
+{{-- NOTIFIKASI --}}
 @php
-$notifications = \App\Models\Notification::where('user_id', $user->id)->where('type', 'user')->where('read', false)->latest()->get();
+    $notifications = \App\Models\Notification::where('user_id', $user->id)
+                    ->where('type', 'user')
+                    ->where('read', false)
+                    ->latest()
+                    ->get();
 @endphp
+
 @if($notifications->count())
-    <div class="alert alert-warning">
+    <div class="alert alert-warning mt-3">
         <b>Notifikasi:</b>
         <ul class="mb-0">
             @foreach($notifications as $notif)
@@ -188,4 +253,5 @@ $notifications = \App\Models\Notification::where('user_id', $user->id)->where('t
         </ul>
     </div>
 @endif
-@endsection 
+
+@endsection
