@@ -6,13 +6,6 @@ use App\Http\Controllers\AnnouncementController;
 use App\Http\Controllers\AcademicYearController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserDocumentController;
-use App\Http\Controllers\FormFieldController; // <--- INI YANG SEBELUMNYA HILANG DAN BIKIN LAYAR PUTIH
-
-/*
-|--------------------------------------------------------------------------
-| Web Routes
-|--------------------------------------------------------------------------
-*/
 
 Route::get('/', function () {
     if (auth()->check()) {
