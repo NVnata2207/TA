@@ -43,7 +43,7 @@
         <div class="card-body">
             <div class="table-responsive">
                 <table class="table table-bordered" width="100%" cellspacing="0">
-                    <thead>
+                    <thead class="bg-light">
                         <tr>
                             <th>Nama Dokumen</th>
                             <th style="width: 15%;">Status</th>
@@ -52,51 +52,64 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach($types as $typeKey => $typeName)
+                        {{-- LOOPING DARI DATABASE (Requirements) --}}
+                        @foreach($requirements as $req)
+                        
+                        {{-- Logika: Cari apakah User sudah upload dokumen untuk requirement ini? --}}
+                        @php
+                            // Mencari dokumen milik user yang requirement_id-nya cocok dengan ID saat ini
+                            // Asumsi: User model punya relasi 'documents'
+                            $myDoc = $user->documents->where('requirement_id', $req->id)->first();
+                        @endphp
+
                         <tr>
-                            <td style="vertical-align: middle;">{{ $typeName }}</td>
-                            
-                            {{-- Status Upload --}}
+                            {{-- 1. Nama Dokumen (Dinamis dari Admin) --}}
                             <td style="vertical-align: middle;">
-                                @if(isset($documents[$typeKey]))
-                                    <span class="badge bg-success">Sudah diupload</span>
-                                    <br>
-                                    <small><a href="{{ asset('storage/'.$documents[$typeKey]->file_path) }}" target="_blank">Lihat File</a></small>
+                                <strong>{{ $req->name }}</strong>
+                            </td>
+                            
+                            {{-- 2. Status Upload --}}
+                            <td style="vertical-align: middle; text-align: center;">
+                                @if($myDoc)
+                                    <span class="badge badge-success px-2 py-1">Sudah diupload</span>
+                                    <div class="mt-1">
+                                        {{-- Link Lihat File --}}
+                                        <a href="{{ asset('storage/'.$myDoc->file_path) }}" target="_blank" class="text-xs font-weight-bold text-primary">
+                                            <i class="fas fa-eye"></i> Lihat File
+                                        </a>
+                                    </div>
                                 @else
-                                    <span class="badge bg-secondary">Belum ada</span>
+                                    <span class="badge badge-secondary px-2 py-1">Belum ada</span>
                                 @endif
                             </td>
 
-                            {{-- Form Upload --}}
+                            {{-- 3. Form Upload --}}
                             <td style="vertical-align: middle;">
                                 <form action="{{ route('user.documents.store') }}" method="POST" enctype="multipart/form-data" class="d-flex">
                                     @csrf
-                                    <input type="hidden" name="type" value="{{ $typeKey }}">
+                                    {{-- Penting: Kirim ID Requirement --}}
+                                    <input type="hidden" name="requirement_id" value="{{ $req->id }}">
+                                    <input type="hidden" name="document_type" value="{{ $req->name }}">
                                     
-                                    {{-- INPUT FILE --}}
-                                    {{-- Jika Locked, tambahkan atribut 'disabled' --}}
-                                    <input type="file" name="file" class="form-control form-control-sm me-2" accept=".pdf" required 
-                                        {{ $isLocked ? 'disabled' : '' }}>
-                                    
-                                    {{-- TOMBOL UPLOAD --}}
-                                    <button type="submit" class="btn btn-primary btn-sm" {{ $isLocked ? 'disabled' : '' }}>
-                                        @if($isLocked) 
-                                            <i class="fas fa-lock"></i> 
-                                        @else 
-                                            Upload 
-                                        @endif
-                                    </button>
+                                    <div class="input-group input-group-sm">
+                                        <input type="file" name="file" class="form-control" accept=".pdf" required {{ $isLocked ? 'disabled' : '' }}>
+                                        <div class="input-group-append">
+                                            <button type="submit" class="btn btn-primary" {{ $isLocked ? 'disabled' : '' }}>
+                                                <i class="fas fa-upload"></i> Upload
+                                            </button>
+                                        </div>
+                                    </div>
                                 </form>
                             </td>
 
-                            {{-- Tombol Hapus --}}
+                            {{-- 4. Tombol Hapus --}}
                             <td style="vertical-align: middle; text-align: center;">
-                                @if(isset($documents[$typeKey]))
-                                    <form action="{{ route('user.documents.destroy', $typeKey) }}" method="POST" onsubmit="return confirm('Yakin ingin menghapus berkas ini?')">
+                                @if($myDoc)
+                                    <form action="{{ route('user.documents.destroy', $myDoc->id) }}" method="POST" onsubmit="return confirm('Yakin ingin menghapus berkas ini?')">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="btn btn-danger btn-sm" {{ $isLocked ? 'disabled' : '' }}>
-                                            Hapus
+                                        <button type="submit" class="btn btn-danger btn-circle btn-sm" title="Hapus" {{ $isLocked ? 'disabled' : '' }}>
+                                            <i class="fas fa-trash"></i>
                                         </button>
                                     </form>
                                 @endif
@@ -106,8 +119,11 @@
                     </tbody>
                 </table>
             </div>
+            
             <div class="mt-3">
-                <small class="text-muted">* Format file wajib <b>PDF</b>. Maksimal ukuran file <b>2MB</b>.</small>
+                <small class="text-muted">
+                    <i class="fas fa-info-circle"></i> Format file wajib <b>PDF</b>. Maksimal ukuran file <b>2MB</b>.
+                </small>
             </div>
         </div>
     </div>

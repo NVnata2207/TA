@@ -26,30 +26,52 @@
                     <label for="nisn" class="form-label">NISN</label>
                     <input type="text" class="form-control" id="nisn" name="nisn" required placeholder="Masukkan NISN Anda">
                 </div>
+ {{-- 1. PILIHAN JENJANG (TANPA DATABASE BARU) --}}
+                <div class="mb-3">
+                    <label class="form-label font-weight-bold">Jenjang / Kategori Asal</label>
+                    <select name="jenjang_tambahan" class="form-control" required>
+                        <option value="" disabled selected>-- Pilih Jenjang --</option>
+                        <option value="SD">SD / MI (Sederajat)</option>
+                        <option value="SMP">SMP / MTs (Sederajat)</option>
+                    </select>
+                </div>
 
+                {{-- 2. EMAIL --}}
                 <div class="mb-3">
                     <label for="email" class="form-label">Email</label>
                     <input type="email" class="form-control" id="email" name="email" required placeholder="nama@email.com">
                 </div>
 
+                {{-- 3. PASSWORD --}}
                 <div class="mb-3">
                     <label for="password" class="form-label">Kata Sandi</label>
                     <input type="password" class="form-control" id="password" name="password" required>
                 </div>
 
+                {{-- 4. KONFIRMASI PASSWORD --}}
                 <div class="mb-3">
                     <label for="password_confirmation" class="form-label">Konfirmasi Kata Sandi</label>
                     <input type="password" class="form-control" id="password_confirmation" name="password_confirmation" required>
                 </div>
 
+                {{-- 5. PILIHAN DAFTAR SEBAGAI (DINAMIS - KUOTA ADMIN) --}}
                 <div class="mb-3">
-                    <label for="role" class="form-label">Daftar Sebagai</label>
+                    <label for="role" class="form-label font-weight-bold">Daftar Sebagai</label>
                     <select class="form-select" id="role" name="role" required>
-                        <option value="user">User</option>
-                        <option value="admin">Admin</option>
+                        
+                        {{-- Pilihan User (Selalu Muncul) --}}
+                        <option value="user" selected>Calon Siswa (User)</option>
+
+                        {{-- Pilihan Admin (Hanya muncul jika kuota < 2) --}}
+                        {{-- Menggunakan isset agar tidak error jika variabel belum dikirim --}}
+                        @if(isset($bisaDaftarAdmin) && $bisaDaftarAdmin)
+                            <option value="admin">Admin (Staff)</option>
+                        @endif
+
                     </select>
                 </div>
 
+                {{-- TOMBOL SUBMIT --}}
                 <button type="submit" class="btn btn-primary w-100">Buat Pengguna</button>
             </form>
 

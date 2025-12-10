@@ -1,6 +1,8 @@
 @extends('layouts.admin')
 @section('page_title', 'Dashboard')
 @section('content')
+
+{{-- 1. INFORMASI JADWAL --}}
 <div class="row mb-3">
     <div class="col-12">
         <div class="alert alert-info p-2">
@@ -16,86 +18,51 @@
         </div>
     </div>
 </div>
+{{-- 2. STATISTIK STATUS PENDAFTAR --}}
 <div class="row">
-    <div class="col-md-3 col-6">
-        <div class="small-box bg-info">
-            <div class="inner">
-                <h3>0</h3>
-                <p>ZONASI</p>
-                <span>Kuota 173</span>
-            </div>
-            <div class="icon"><i class="fas fa-map-marked-alt"></i></div>
-        </div>
-    </div>
-    <div class="col-md-3 col-6">
-        <div class="small-box bg-warning">
-            <div class="inner">
-                <h3>0</h3>
-                <p>PRESTASI</p>
-                <span>Kuota 58</span>
-            </div>
-            <div class="icon"><i class="fas fa-graduation-cap"></i></div>
-        </div>
-    </div>
-    <div class="col-md-3 col-6">
-        <div class="small-box bg-success">
-            <div class="inner">
-                <h3>0</h3>
-                <p>AFIRMASI</p>
-                <span>Kuota 43</span>
-            </div>
-            <div class="icon"><i class="fas fa-id-card"></i></div>
-        </div>
-    </div>
-    <div class="col-md-3 col-6">
-        <div class="small-box bg-danger">
-            <div class="inner">
-                <h3>0</h3>
-                <p>PERPINDAHAN</p>
-                <span>Kuota 14</span>
-            </div>
-            <div class="icon"><i class="fas fa-exchange-alt"></i></div>
-        </div>
-    </div>
-</div>
-<div class="row">
+    {{-- TOTAL PENDAFTAR --}}
     <div class="col-md-3 col-6">
         <div class="small-box bg-cyan">
             <div class="inner">
-                <h3>0</h3>
+                <h3>{{ $totalPendaftar ?? 0 }}</h3> {{-- <-- SUDAH DIGANTI --}}
                 <p>Total Pendaftar</p>
             </div>
             <div class="icon"><i class="fas fa-users"></i></div>
         </div>
     </div>
+    {{-- PENDAFTAR BARU --}}
     <div class="col-md-3 col-6">
         <div class="small-box bg-purple">
             <div class="inner">
-                <h3>0</h3>
+                <h3>{{ $pendaftarBaru ?? 0 }}</h3> {{-- <-- SUDAH DIGANTI --}}
                 <p>Pendaftar Baru</p>
             </div>
             <div class="icon"><i class="fas fa-user-plus"></i></div>
         </div>
     </div>
+    {{-- SUDAH DIVERIFIKASI --}}
     <div class="col-md-3 col-6">
         <div class="small-box bg-teal">
             <div class="inner">
-                <h3>0</h3>
+                <h3>{{ $sudahVerifikasi ?? 0 }}</h3> {{-- <-- SUDAH DIGANTI --}}
                 <p>Pendaftar sudah diverifikasi</p>
             </div>
             <div class="icon"><i class="fas fa-user-check"></i></div>
         </div>
     </div>
+    {{-- BERKAS KURANG --}}
     <div class="col-md-3 col-6">
         <div class="small-box bg-orange">
             <div class="inner">
-                <h3>0</h3>
+                <h3>{{ $berkasKurang ?? 0 }}</h3> {{-- <-- SUDAH DIGANTI --}}
                 <p>Berkas kurang/tidak sesuai</p>
             </div>
             <div class="icon"><i class="fas fa-file-alt"></i></div>
         </div>
     </div>
 </div>
+
+{{-- 3. PENGUMUMAN --}}
 <div class="row">
     <div class="col-12">
         <div class="card mb-4">
@@ -126,17 +93,39 @@
         </div>
     </div>
 </div>
+
+{{-- 4. NOTIFIKASI ADMIN (DIPERBAIKI) --}}
 @php
-$notifications = \App\Models\Notification::where('user_id', auth()->id())->where('type', 'admin')->where('read', false)->latest()->get();
+    $notifications = \App\Models\Notification::where('user_id', auth()->id())
+                    ->where('type', 'admin')
+                    ->where('read', false)
+                    ->latest()->get();
 @endphp
+
 @if($notifications->count())
-    <div class="alert alert-info">
-        <b>Notifikasi:</b>
-        <ul class="mb-0">
+    <div class="alert alert-info shadow-sm">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <b><i class="fas fa-bell"></i> Notifikasi Baru ({{ $notifications->count() }})</b>
+        </div>
+        
+        <div class="list-group">
             @foreach($notifications as $notif)
-                <li>{{ $notif->message }}</li>
+                {{-- JADIKAN LINK (<a>) AGAR BISA DIKLIK --}}
+                <a href="{{ $notif->link ?? '#' }}" class="list-group-item list-group-item-action flex-column align-items-start p-2">
+                    <div class="d-flex w-100 justify-content-between">
+                        {{-- Nama Pengirim (Opsional, ambil dari pesan) --}}
+                        <small class="text-muted">{{ $notif->created_at->diffForHumans() }}</small>
+                        <small><i class="fas fa-external-link-alt"></i></small>
+                    </div>
+                    
+                    {{-- CSS PENTING: word-wrap & white-space AGAR TIDAK KELUAR KOTAK --}}
+                    <p class="mb-1 text-dark" style="font-size: 0.9rem; white-space: normal; word-wrap: break-word;">
+                        {!! $notif->message !!}
+                    </p>
+                </a>
             @endforeach
-        </ul>
+        </div>
     </div>
 @endif
-@endsection 
+
+@endsection

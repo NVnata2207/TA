@@ -9,7 +9,6 @@
             <button class="btn btn-danger btn-sm me-1" onclick="confirmBulkDelete()">
                 <i class="fa fa-trash"></i> Hapus Data Terpilih
             </button>
-            <button class="btn btn-warning btn-sm text-white me-1"><i class="fa fa-download"></i> Unduh Rekap Nilai</button>
             <a href="{{ route('users.export_excel') }}" class="btn btn-primary btn-sm" target="_blank">
                 <i class="fa fa-download"></i> Unduh Rekap Peserta Excel
             </a>
@@ -22,8 +21,16 @@
                     <option>10</option><option>25</option><option>50</option>
                 </select> entries
             </div>
-            <div>
-                <input type="text" class="form-control" placeholder="Search:" style="width:200px;display:inline-block;">
+            <div class="card-tools">
+                <form action="{{ route('users.index') }}" method="GET">
+                    <div class="input-group input-group-sm" style="width: 250px;">
+                        <input type="text" name="search" class="form-control float-right" placeholder="Cari Nama Peserta..." value="{{ request('search') }}">
+
+                        <button class="btn btn-outline-secondary" type="submit">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
         <div class="table-responsive">

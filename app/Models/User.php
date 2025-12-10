@@ -2,16 +2,21 @@
 
 namespace App\Models;
 
-use Illuminate\Contracts\Auth\MustVerifyEmail;
+// use Illuminate\Contracts\Auth\MustVerifyEmail; // Aktifkan jika butuh verifikasi email
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Laravel\Sanctum\HasApiTokens; // Dihapus, sesuai kode baru Anda
+
+// KARENA KITA SUDAH DI NAMESPACE 'App\Models', 
+// SEBENARNYA TIDAK PERLU PAKAI 'use App\Models\...' LAGI.
+// TAPI KALAU MAU DIPAKAI SUPAYA TIDAK MERAH DI VSCODE, TIDAK APA-APA.
+use App\Models\UserDocument; 
+use App\Models\ExamAnswer;
+use App\Models\AcademicYear;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable; // HasApiTokens dihapus, ini sudah benar
+    use HasFactory, Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -23,12 +28,12 @@ class User extends Authenticatable
         'nisn',
         'email',
         'password',
-        'kode_pendaftaran', // Dari kode baru Anda
+        'kode_pendaftaran',
         'status_pendaftaran',
         'hasil',
-        'daftar_ulang',     // Dari kode baru Anda
+        'daftar_ulang',
         'academic_year_id',
-        'role',             // DITAMBAHKAN KEMBALI: Ini penting untuk AuthController Anda
+        'role',
     ];
 
     /**
@@ -43,7 +48,6 @@ class User extends Authenticatable
 
     /**
      * Get the attributes that should be cast.
-     * (Ini sintaks baru Laravel 10+, sudah benar)
      *
      * @return array<string, string>
      */
@@ -57,7 +61,6 @@ class User extends Authenticatable
 
     /**
      * Fungsi boot() untuk membuat kode_pendaftaran secara otomatis.
-     * (Ini dari kode baru Anda, sudah benar)
      */
     protected static function boot()
     {
@@ -74,7 +77,6 @@ class User extends Authenticatable
 
     /**
      * Relasi ke AcademicYear.
-     * (Saya gunakan versi yang lebih eksplisit dengan foreign key)
      */
     public function academicYear()
     {
@@ -82,12 +84,16 @@ class User extends Authenticatable
     }
 
     /**
-     * DITAMBAHKAN KEMBALI: Relasi ke ExamAnswer.
-     * Ini diperlukan oleh logika 'Auto Reject' di userDashboard Anda.
+     * Relasi ke UserDocument (Berkas yang diupload user)
      */
-    public function examAnswers()
+    public function documents()
     {
-        return $this->hasMany(ExamAnswer::class, 'user_id');
+        return $this->hasMany(UserDocument::class, 'user_id'); 
+    }
+    
+    // Relasi: Satu User punya Satu Detail Siswa
+    public function studentDetail()
+    {
+        return $this->hasOne(StudentDetail::class);
     }
 }
-

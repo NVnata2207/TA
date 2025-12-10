@@ -4,8 +4,9 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use App\Models\User;
 use Illuminate\Support\Facades\Hash;
+use App\Models\User;
+use App\Models\AcademicYear; // Pastikan ini ada di atas
 
 class AuthController extends Controller
 {
@@ -27,8 +28,9 @@ class AuthController extends Controller
         return view('auth.login');
     }
 
-    public function showRegisterForm()
+public function showRegisterForm()
     {
+        // 1. Cek apakah user sudah login (KODINGAN LAMA - BIARKAN)
         if (auth()->check()) {
             if (auth()->user()->role === 'admin') {
                 return redirect()->route('dashboard.admin');
@@ -36,14 +38,32 @@ class AuthController extends Controller
                 return redirect()->route('dashboard.user');
             }
         }
+
+        // 2. Cek Tahun Ajaran Aktif (KODINGAN LAMA - BIARKAN)
         $activeYear = \App\Models\AcademicYear::where('is_active', true)->first();
+        
         if (!$activeYear) {
             return redirect()->route('login')->with('error', 'Pendaftaran ditutup karena tidak ada tahun ajaran yang aktif.');
         }
+        
         if ($activeYear->kuota !== null && $activeYear->kuota <= 0) {
             return redirect()->route('login')->with('error', 'Kuota pendaftaran sudah habis.');
         }
-        return view('auth.register');
+
+        // ============================================================
+        // 3. TAMBAHAN BARU: LOGIKA PEMBATASAN ADMIN
+        // ============================================================
+        
+        // Hitung berapa admin yang sudah ada
+        $jumlahAdmin = \App\Models\User::where('role', 'admin')->count();
+        
+        // Cek apakah masih boleh daftar admin? (Jika kurang dari 2, boleh. Jika sudah 2, tidak boleh)
+        $bisaDaftarAdmin = ($jumlahAdmin < 2);
+
+        // ============================================================
+
+        // 4. Update Return View (Kirim variabel $bisaDaftarAdmin ke tampilan)
+        return view('auth.register', compact('bisaDaftarAdmin'));
     }
 
     public function login(Request $request)
@@ -62,51 +82,60 @@ class AuthController extends Controller
 
     public function register(Request $request)
     {
-        $activeYear = \App\Models\AcademicYear::where('is_active', true)->first();
+        $activeYear = AcademicYear::where('is_active', true)->first();
         $academic_year_id = $activeYear ? $activeYear->id : null;
 
         if ($activeYear && $activeYear->kuota !== null && $activeYear->kuota <= 0) {
             return redirect()->route('login')->with('error', 'Kuota pendaftaran sudah habis.');
         }
 
-        // LOGIKA ADMIN (Jarang dipakai registrasi publik, tapi kita perbaiki juga)
+        // LOGIKA ADMIN
         if ($request->role === 'admin') {
             $request->validate([
                 'nisn' => 'required|string|unique:users',
                 'password' => 'required|string|min:6|confirmed',
                 'role' => 'required|in:admin,user',
-                 // Admin biasanya tidak wajib email di awal, tapi kalau mau diisi boleh
             ]);
             $user = User::create([
-                'name' => 'Administrator', // Kasih nama default biar tidak error
+                'name' => 'Administrator',
                 'nisn' => $request->nisn,
                 'password' => Hash::make($request->password),
                 'role' => 'admin',
-                'email' => $request->email ?? null, // <--- UBAH INI (Ambil dari request, atau null)
+                'email' => $request->email ?? null,
                 'academic_year_id' => $academic_year_id,
                 'status_pendaftaran' => 'Pendaftar Baru',
             ]);
 
-        // LOGIKA USER / PENDAFTAR SISWA (INI YANG PENTING)
-        } else {
+        // LOGIKA USER
+            } else {
+            // 1. Validasi Input Siswa
             $request->validate([
                 'name' => 'required|string|max:255',
-                'email' => 'required|email|unique:users', // <--- TAMBAHKAN VALIDASI INI
+                'email' => 'required|email|unique:users',
                 'nisn' => 'required|string|unique:users',
                 'password' => 'required|string|min:6|confirmed',
                 'role' => 'required|in:admin,user',
+                
+                // Tambahan: Wajib pilih Jenjang (SD/SMP)
+                'jenjang_tambahan' => 'required', 
             ]);
             
+            // 2. TRIK GABUNGKAN NAMA (Agar masuk database tanpa kolom baru)
+            // Contoh: Input "Budi" dan "SD" -> Disimpan jadi "Budi (SD)"
+            $namaGabungan = $request->name . ' (' . $request->jenjang_tambahan . ')';
+
+            // 3. Simpan Data Siswa
             $user = User::create([
-                'name' => $request->name,
+                'name' => $namaGabungan, // <--- Simpan nama yang sudah digabung
                 'nisn' => $request->nisn,
                 'password' => Hash::make($request->password),
                 'role' => 'user',
-                'email' => $request->email, // <--- UBAH INI (Jangan dikosongkan lagi!)
+                'email' => $request->email,
                 'academic_year_id' => $academic_year_id,
                 'status_pendaftaran' => 'Pendaftar Baru',
             ]);
         }
+        // 👆 BATAS AKHIR PERUBAHAN 👆
 
         if ($activeYear && $activeYear->kuota !== null && $activeYear->kuota > 0) {
             $activeYear->decrement('kuota');
@@ -121,34 +150,66 @@ class AuthController extends Controller
         }
     }
 
+    /**
+     * Dashboard Admin (Hitung Statistik)
+     */
     public function adminDashboard()
     {
-        if (!auth()->user() || auth()->user()->role !== 'admin') {
-            return redirect()->route('dashboard.user')->with('error', 'Akses ditolak.');
-        }
-        $activeYear = \App\Models\AcademicYear::where('is_active', true)->first();
-        return view('dashboard.admin', compact('activeYear'));
+        // 1. AMBIL TAHUN AJARAN AKTIF
+        $activeYear = \App\Models\AcademicYear::where('is_active', 1)->first();
+
+        // 2. HITUNG STATISTIK UTAMA
+        $totalPendaftar = \App\Models\User::where('role', 'user')->count();
+
+        $pendaftarBaru = \App\Models\User::where('role', 'user')
+                             ->where('status_pendaftaran', 'Pendaftar Baru')
+                             ->count();
+
+        // Menghitung siswa yang SUDAH DITERIMA (Lulus Seleksi)
+        $sudahVerifikasi = \App\Models\User::where('role', 'user')
+                               ->where('hasil', 'Di Terima')
+                               ->count();
+
+        // PERBAIKAN: Menghitung siswa yang STATUSNYA BERKAS KURANG / TIDAK SESUAI
+        // (Bukan menghitung yang ditolak/gagal seleksi)
+        $berkasKurang = \App\Models\User::where('role', 'user')
+                            ->whereIn('status_pendaftaran', ['Berkas Kurang', 'Berkas Tidak Sesuai'])
+                            ->count();
+
+        // 3. HITUNG JALUR (Set 0)
+        $zonasi = 0; 
+        $prestasi = 0;
+        $afirmasi = 0;
+        $perpindahan = 0;
+
+        // 4. KIRIM SEMUA DATA KE VIEW
+        return view('dashboard.admin', compact(
+            'activeYear',
+            'totalPendaftar', 
+            'pendaftarBaru', 
+            'sudahVerifikasi', 
+            'berkasKurang',
+            'zonasi', 'prestasi', 'afirmasi', 'perpindahan'
+        ));
     }
 
+    /**
+     * Dashboard User
+     */
     public function userDashboard()
     {
-        $activeYear = \App\Models\AcademicYear::where('is_active', true)->first();
+        $activeYear = AcademicYear::where('is_active', true)->first();
         $user = auth()->user();
+        
         // Auto reject jika status belum diverifikasi hingga selesai pendaftaran
         if ($user->status_pendaftaran !== 'Sudah Diverifikasi' && $activeYear && now()->gt(\Carbon\Carbon::parse($activeYear->selesai_pendaftaran))) {
             if ($user->hasil !== 'Tidak Diterima') {
                 $user->hasil = 'Tidak Diterima';
                 $user->save();
             }
-        }
+        }      
         // Auto reject jika sudah diverifikasi tapi tidak mengerjakan ujian hingga selesai seleksi
         if ($user->status_pendaftaran === 'Sudah Diverifikasi' && $activeYear && now()->gt(\Carbon\Carbon::parse($activeYear->selesai_seleksi))) {
-            $soalCount = \App\Models\ExamQuestion::where('academic_year_id', $activeYear->id)->count();
-            $jawabCount = \App\Models\ExamAnswer::where('user_id', $user->id)->whereIn('exam_question_id', \App\Models\ExamQuestion::where('academic_year_id', $activeYear->id)->pluck('id'))->count();
-            if ($soalCount > 0 && $jawabCount == 0 && $user->hasil !== 'Tidak Diterima') {
-                $user->hasil = 'Tidak Diterima';
-                $user->save();
-            }
         }
         return view('dashboard.user', compact('activeYear', 'user'));
     }
@@ -158,41 +219,4 @@ class AuthController extends Controller
         auth()->logout();
         return redirect()->route('login');
     }
-
-// ... di dalam method controller Anda (misalnya: index)
-
-    public function index(Request $request)
-    {
-    // 1. Ambil kata kunci pencarian dari request
-    // 'search' adalah nama input di form Anda
-    $kataKunci = $request->input('search');
-
-    // 2. Mulai query ke database
-    $query = User::query();
-
-    // 3. Jika ada kata kunci, tambahkan filter 'where'
-    if ($kataKunci) {
-        // 'LIKE' digunakan untuk mencari sebagian kata
-        // '%' adalah wildcard, artinya "apapun"
-        // "%winata%" berarti mencari apapun yang mengandung "winata"
-        $query->where('name', 'LIKE', '%' . $kataKunci . '%');
-    }
-
-    // 4. Ambil datanya (misal: 10 per halaman)
-    $users = $query->paginate(10);
-
-    // 5. Kirim data ke view
-    return view('admin.users.index', [
-        'users' => $users,
-        'kataKunci' => $kataKunci // Untuk menampilkan kembali di kotak search
-    ]);
 }
-
-
-
-
-
-
-
-
-} 

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB; // Mengimpor DB Facade untuk akses query builder manual (tabel settings)
 use App\Models\FormField; // Mengimpor Model FormField
+use Illuminate\Support\Str;
 
 class FormFieldController extends Controller
 {
@@ -129,36 +130,24 @@ class FormFieldController extends Controller
 
         return back()->with('success', 'Kategori dan seluruh field di dalamnya berhasil dihapus.');
     }
-
-    /**
-     * Fungsi updateSettings menyimpan pengaturan field mana yang aktif/tidak,
-     * serta menyimpan setting global seperti 'tahun_pelajaran'.
+/**
+     * Fungsi untuk menyimpan checklist pengaturan formulir
+     * WAJIB BERNAMA: updateAll (sesuai route admin.form.settings)
      */
-    public function updateSettings(Request $request)
+    public function updateAll(Request $request)
     {
-        // Ambil array ID field yang dicentang (aktif). Jika kosong, array kosong.
-        $activeFields = $request->input('fields', []);
+        // 1. Ambil array ID field yang dicentang
+        $checkedFieldIds = $request->input('fields', []);
 
-        // Loop semua field di database.
-        foreach (FormField::all() as $field) {
-            // Cek apakah ID field ini ada di daftar $activeFields.
-            // Jika ada, is_active = true. Jika tidak, is_active = false.
-            $field->is_active = in_array($field->id, $activeFields);
-            $field->save();
+        // 2. Matikan semua field dulu (set is_active = 0)
+        \App\Models\FormField::query()->update(['is_active' => 0]);
+
+        // 3. Nyalakan field yang dipilih (set is_active = 1)
+        if (!empty($checkedFieldIds)) {
+            \App\Models\FormField::whereIn('id', $checkedFieldIds)->update(['is_active' => 1]);
         }
 
-        // Simpan setting 'tahun_pelajaran' ke tabel 'settings'.
-        if ($request->has('tahun_pelajaran')) {
-            // updateOrInsert: Jika key 'tahun_pelajaran' ada -> update value-nya.
-            // Jika tidak ada -> buat baris baru.
-            DB::table('settings')->updateOrInsert([
-                'key' => 'tahun_pelajaran' // Kondisi pencarian
-            ], [
-                'value' => $request->tahun_pelajaran // Data yang disimpan
-            ]);
-        }
-
-        return redirect()->back()->with('success', 'Pengaturan formulir berhasil disimpan.');
+        return redirect()->back()->with('success', 'Pengaturan formulir berhasil disimpan!');
     }
 
     // --- BAGIAN TAMBAH FIELD SPESIFIK KE KATEGORI ---
@@ -167,25 +156,32 @@ class FormFieldController extends Controller
      * Fungsi storeField mirip dengan store(), tapi biasanya dipanggil dari modal
      * "Tambah Field di Kategori X", sehingga logic-nya sedikit lebih spesifik.
      */
+    // Pastikan baris ini ada di paling atas file (di bawah namespace)
     public function storeField(Request $request)
     {
+        // 1. BUAT NAME OTOMATIS + ANGKA ACAK (Biar Unik)
+        $autoName = \Illuminate\Support\Str::slug($request->label, '_') . '_' . rand(100, 999);
+        $request->merge(['name' => $autoName]);
+
+        // 2. VALIDASI
         $request->validate([
-            'label' => 'required|string|max:255',
-            'name' => 'required|string|max:255|unique:form_fields',
-            'category' => 'required|string|max:255',
-            'order' => 'nullable|integer',
-            'is_active' => 'nullable|boolean',
+            'label'    => 'required|string|max:255',
+            'name'     => 'required|string|max:255|unique:form_fields,name',
+            'category' => 'required',
+            'order'    => 'nullable|integer',
         ]);
 
-        FormField::create([
-            'label' => $request->label,
-            'name' => $request->name,
-            'category' => $request->category,
-            'order' => $request->order ?? 0, // Jika order kosong, set 0.
-            'is_active' => $request->has('is_active'), // Cek checkbox is_active.
+        // 3. SIMPAN KE DATABASE
+        \App\Models\FormField::create([
+            'category'  => $request->category,
+            'label'     => $request->label,
+            'name'      => $request->name,
+            'order'     => $request->order ?? 0,
+            'is_active' => $request->has('is_active') ? 1 : 0,
+            // 'type' => 'text'  <-- BARIS INI SAYA HAPUS KARENA BIKIN ERROR
         ]);
 
-        return back()->with('success', 'Field berhasil ditambahkan ke kategori.');
+        return back()->with('success', 'Field berhasil ditambahkan.');
     }
 
     // Duplikasi fungsi destroy untuk endpoint yang berbeda (mungkin untuk routing yang lebih spesifik).
@@ -194,5 +190,25 @@ class FormFieldController extends Controller
         $field = FormField::findOrFail($id);
         $field->delete();
         return back()->with('success', 'Field berhasil dihapus.');
+    }
+    /**
+     * FUNGSI BARU: Untuk Mengedit Field (Label & Urutan)
+     */
+    public function updateField(Request $request, $id)
+    {
+        $request->validate([
+            'label' => 'required',
+            'order' => 'integer',
+        ]);
+
+        $field = FormField::findOrFail($id);
+        
+        $field->update([
+            'label'     => $request->label,
+            'order'     => $request->order,
+            'is_active' => $request->has('is_active') ? 1 : 0,
+        ]);
+
+        return redirect()->back()->with('success', 'Field berhasil diperbarui.');
     }
 }

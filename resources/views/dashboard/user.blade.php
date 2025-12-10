@@ -83,9 +83,54 @@
     </div>
 </div>
 
+{{-- NOTIFIKASI --}}
+@php
+    $notifications = \App\Models\Notification::where('user_id', $user->id)
+                    ->where('type', 'user')
+                    ->where('read', false)
+                    ->latest()
+                    ->get();
+@endphp
+
+@if($notifications->count())
+    <div class="alert alert-warning mt-3">
+        <b>Notifikasi:</b>
+        <ul class="mb-0">
+            @foreach($notifications as $notif)
+                <li>{{ $notif->message }}</li>
+            @endforeach
+        </ul>
+    </div>
+@endif
+
 {{-- TOMBOL AKSI UTAMA (Formulir, Berkas, Cetak) --}}
 <div class="row mb-3">
-    {{-- CARD 1: FORMULIR --}}
+
+    {{-- CARD 1: Isi Formulir --}}
+    <div class="col-md-3 col-6 mb-3">
+        <div class="card text-white" style="background:#ff0000FF;">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-2">
+                    <i class="fas fa-file-alt fa-2x me-2"></i>
+                    <div>
+                        <div class="fw-bold" style="font-size:1.3rem;">Formulir</div>
+                        <div>Biodata</div>
+                    </div>
+                </div>
+                @if($isLocked)
+                    <button class="btn btn-light btn-sm w-100 disabled" style="opacity: 0.7; cursor: not-allowed;">
+                        <i class="fas fa-lock"></i> Akses Ditutup
+                    </button>
+                @else
+                    <a href="{{ route('user.documents.index') }}" class="btn btn-light btn-sm w-100">Isi Formulir Disini
+                        <i class="fa fa-upload"></i>
+                    </a>
+                @endif
+            </div>
+        </div>
+    </div>
+
+    {{-- CARD 2: FORMULIR --}}
     <div class="col-md-3 col-6 mb-3">
         <div class="card text-white" style="background:#20cfcf;">
             <div class="card-body">
@@ -109,7 +154,7 @@
         </div>
     </div>
 
-    {{-- CARD 2: BERKAS --}}
+    {{-- CARD 3: BERKAS --}}
     <div class="col-md-3 col-6 mb-3">
         <div class="card text-white" style="background:#ff9800;">
             <div class="card-body">
@@ -213,45 +258,8 @@
                 <div><i class="fas fa-envelope"></i> - info@ppdb.com</div>
             </div>
         </div>
-
-        {{-- Card Halaman Ujian --}}
-        <div class="card">
-            <div class="card-body">
-                <h5 class="card-title">Halaman Ujian</h5>
-                <p class="card-text small">Akses halaman ujian untuk mengunduh soal dan mengupload jawaban.</p>
-                @if($isLocked)
-                    <button class="btn btn-secondary w-100 disabled">
-                        <i class="fas fa-lock"></i> Ujian Selesai
-                    </button>
-                @else
-                    <a href="{{ route('user.exam.index') }}" class="btn btn-primary w-100">
-                        <i class="fas fa-file-alt"></i> Masuk ke Halaman Ujian
-                    </a>
-                @endif
-            </div>
-        </div>
-
     </div>
 </div>
 
-{{-- NOTIFIKASI --}}
-@php
-    $notifications = \App\Models\Notification::where('user_id', $user->id)
-                    ->where('type', 'user')
-                    ->where('read', false)
-                    ->latest()
-                    ->get();
-@endphp
-
-@if($notifications->count())
-    <div class="alert alert-warning mt-3">
-        <b>Notifikasi:</b>
-        <ul class="mb-0">
-            @foreach($notifications as $notif)
-                <li>{{ $notif->message }}</li>
-            @endforeach
-        </ul>
-    </div>
-@endif
 
 @endsection

@@ -44,41 +44,72 @@
     <!-- Navbar -->
     <nav class="main-header navbar navbar-expand navbar-white navbar-light">
         <ul class="navbar-nav ml-auto w-100 justify-content-end align-items-center">
+            {{-- BAGIAN NOTIFIKASI (VERSI DESAIN CANTIK & MODERN) --}}
             <li class="nav-item dropdown">
-                @php
-                $notif = \App\Models\Notification::where('user_id', auth()->id())
-                    ->where('type', auth()->user()->role)
-                    ->where('read', false)
-                    ->latest()->take(10)->get();
-                @endphp
-                <a class="nav-link position-relative" href="#" id="notifDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                    <i class="fas fa-bell"></i>
-                    @if($notif->count())
-                        <span class="badge bg-danger position-absolute top-0 start-100 translate-middle">{{ $notif->count() }}</span>
+                <a class="nav-link" href="#" id="alertsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="far fa-bell fa-lg"></i>
+                    @php
+                        $unreadNotif = \App\Models\Notification::where('user_id', auth()->id())
+                                        ->where('read', false)
+                                        ->latest()->get();
+                    @endphp
+                    
+                    @if($unreadNotif->count() > 0)
+                        <span class="badge badge-danger navbar-badge">{{ $unreadNotif->count() }}</span>
                     @endif
                 </a>
-                <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="notifDropdown" style="min-width:340px;max-width:400px;">
-                    <li class="dropdown-header fw-bold">Notifikasi @if($notif->count())<span class="badge bg-success ms-2">{{ $notif->count() }}</span>@endif</li>
-                    @forelse($notif as $n)
+
+                {{-- Dropdown Menu dengan Border Radius & Shadow Halus --}}
+                <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0" aria-labelledby="alertsDropdown" style="width: 350px; border-radius: 12px; overflow: hidden;">
+                    
+                    {{-- 1. HEADER HIJAU --}}
+                    <li class="bg-success text-white p-3 d-flex justify-content-between align-items-center" style="background: #328E6E !important;">
+                        <h6 class="m-0 fw-bold">Notifikasi</h6>
+                        <span class="badge bg-white text-success rounded-pill">{{ $unreadNotif->count() }} Baru</span>
+                    </li>
+
+                    {{-- 2. LIST NOTIFIKASI --}}
+                    <div style="max-height: 400px; overflow-y: auto;">
+                        @forelse($unreadNotif as $notif)
+                            <li>
+                                <a class="dropdown-item d-flex align-items-start p-3 border-bottom" href="{{ $notif->link ?? '#' }}" style="white-space: normal; transition: background 0.2s;">
+                                    
+                                    {{-- Ikon Bulat Cantik --}}
+                                    <div class="flex-shrink-0 me-3">
+                                        <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; background-color: #e8f5e9;">
+                                            <i class="fas fa-info-circle text-success fa-lg"></i>
+                                        </div>
+                                    </div>
+
+                                    {{-- Konten Teks --}}
+                                    <div class="flex-grow-1">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <span class="fw-bold text-dark" style="font-size: 0.9rem;">Info Sistem</span>
+                                            <small class="text-muted" style="font-size: 0.75rem;">{{ $notif->created_at->diffForHumans(null, true) }}</small>
+                                        </div>
+                                        
+                                        <p class="mb-0 text-secondary text-wrap" style="font-size: 0.85rem; line-height: 1.4;">
+                                            {{ $notif->message }}
+                                        </p>
+                                    </div>
+                                </a>
+                            </li>
+                        @empty
+                            <li class="p-4 text-center text-muted">
+                                <i class="far fa-bell-slash fa-3x mb-3 text-light"></i><br>
+                                <small>Tidak ada notifikasi baru</small>
+                            </li>
+                        @endforelse
+                    </div>
+
+                    {{-- 3. FOOTER --}}
+                    @if($unreadNotif->count() > 0)
                         <li>
-                            @if(auth()->user()->role === 'admin' && preg_match('/mengupload|mengganti berkas/i', $n->message, $m))
-                                @php
-                                    $user = \App\Models\User::where('name', explode(' ', $n->message)[0])->first();
-                                @endphp
-                                @if($user)
-                                    <a href="{{ route('users.show', $user->id) }}?notif={{ $n->id }}" class="dropdown-item text-dark notif-link">
-                                        <i class="fa fa-user me-2"></i> {{ $n->message }}
-                                    </a>
-                                @else
-                                    <span class="dropdown-item text-dark">{{ $n->message }}</span>
-                                @endif
-                            @else
-                                <span class="dropdown-item text-dark">{{ $n->message }}</span>
-                            @endif
+                            <a class="dropdown-item text-center small text-success fw-bold py-2 bg-light" href="#">
+                                Tandai Semua Dibaca
+                            </a>
                         </li>
-                    @empty
-                        <li><span class="dropdown-item text-muted">Tidak ada notifikasi baru</span></li>
-                    @endforelse
+                    @endif
                 </ul>
             </li>
             <li class="nav-item d-flex align-items-center">
@@ -119,10 +150,19 @@
                                 <p>Dashboard</p>
                             </a>
                         </li>
+                        {{-- ITEM 1: MASTER FIELD FORMULIR --}}
                         <li class="nav-item">
-                            <a href="{{ route('form_fields.index') }}" class="nav-link {{ request()->routeIs('form_fields.*') ? 'active' : '' }}">
+                            <a href="{{ route('admin.form_fields.index') }}" class="nav-link {{ request()->routeIs('admin.form_fields.*') ? 'active' : '' }}">
                                 <i class="nav-icon fas fa-list-alt"></i>
                                 <p>Master Field Formulir</p>
+                            </a>
+                        </li> {{-- <--- PASTIKAN INI DITUTUP DULU --}}
+
+                        {{-- ITEM 2: PENGATURAN DOKUMEN UPLOAD (MENU BARU) --}}
+                        <li class="nav-item">
+                            <a href="{{ route('admin.documents.index') }}" class="nav-link {{ request()->routeIs('admin.documents.*') ? 'active' : '' }}">
+                                <i class="nav-icon fas fa-file-upload"></i>
+                                <p>Master Dokumen</p>
                             </a>
                         </li>
                         <li class="nav-item">
@@ -143,12 +183,6 @@
                                 <p>Pengumuman</p>
                             </a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('admin.exam-questions.*') ? 'active' : '' }}" href="{{ route('admin.exam-questions.index') }}">
-                                <i class="fas fa-file-alt"></i>
-                                <span>Manajemen Soal Ujian</span>
-                            </a>
-                        </li>
                     @else
                         <li class="nav-item">
                             <a href="{{ route('dashboard.user') }}" class="nav-link {{ request()->routeIs('dashboard.user') ? 'active' : '' }}">
@@ -156,18 +190,25 @@
                                 <p>Dashboard</p>
                             </a>
                         </li>
+    <!---------------------------- USER MENU ------------------------>
+
                         @if(auth()->user()->role === 'user')
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ route('user.documents.index') }}">
-                                <i class="fa fa-upload"></i> Upload Berkas
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('user.exam.*') ? 'active' : '' }}" href="{{ route('user.exam.index') }}">
-                                <i class="fas fa-file-alt"></i>
-                                <span>Halaman Ujian</span>
-                            </a>
-                        </li> 
+
+                            {{-- 1. ISI FORMULIR (LINK SUDAH BENAR) --}}
+                            <li class="nav-item">
+                                <a href="{{ route('user.form') }}" class="nav-link {{ request()->routeIs('user.form') ? 'active' : '' }}">
+                                    <i class="nav-icon fas fa-edit"></i>
+                                    <p>Isi Formulir Disini</p>
+                                </a>
+                            </li>
+
+                            {{-- 2. UPLOAD BERKAS --}}
+                            <li class="nav-item">
+                                <a href="{{ route('user.documents.index') }}" class="nav-link {{ request()->routeIs('user.documents.*') ? 'active' : '' }}">
+                                    <i class="nav-icon fas fa-upload"></i>
+                                    <p>Upload Berkas</p>
+                                </a>
+                            </li>
                         @endif
                     @endif
                 </ul>

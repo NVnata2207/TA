@@ -1,112 +1,151 @@
 @extends('layouts.admin')
-@section('page_title', 'Cek Berkas Formulir Pendaftaran')
+@section('page_title', 'Pengaturan Formulir Pendaftaran')
+
 @section('content')
-<style>
-    .category-label {
-        display: inline-block;
-        padding: 4px 16px;
-        border-radius: 8px 8px 0 0;
-        font-weight: bold;
-        color: #000000;
-        margin-bottom: 0;
-        font-size: 1rem;
-    }
-    .cat-Data\ Registrasi { background: #f59e42; }
-    .cat-Data\ Pribadi { background: #22c55e; }
-    .cat-Data\ Priodik { background: #06b6d4; }
-    .cat-Data\ Ayah { background: #a78bfa; }
-    .cat-Data\ Ibu { background: #f472b6; }
-    .cat-Data\ Kontak { background: #ef4444; }
-    .cat-Data\ Nilai { background: #0ea5e9; }
-    .checklist-grid { display: flex; flex-wrap: wrap; gap: 12px; }
-    .checklist-item { min-width: 220px; }
-</style>
-<div class="container">
-    <h3 class="mb-3">Pengaturan Formulir Pendaftaran</h3>
+<div class="container pb-5">
+    <h3 class="mb-4 fw-bold"></h3>
+
     @if(session('success'))
-        <div class="alert alert-success">{{ session('success') }}</div>
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            {{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
     @endif
-    <div class="mb-4">
-        <h5>Kelola Kategori (Group)</h5>
-        <form method="POST" action="{{ url('form_fields/store-category') }}" class="d-inline-block me-3">
-    @csrf
-            <input type="text" name="category" class="form-control d-inline-block w-auto" placeholder="Tambah Kategori Baru" required>
-            <button type="submit" class="btn btn-success btn-sm">Tambah</button> 
-        </form>
-            <div class="d-inline-block">
-            @foreach($categories as $cat)
-                <form method="POST" action="{{ url('form_fields/update-category/'.$cat) }}" class="d-inline-block me-2">
+    
+    @if($errors->any())
+        <div class="alert alert-danger">
+            <ul class="mb-0">
+                @foreach($errors->all() as $error) <li>{{ $error }}</li> @endforeach
+            </ul>
+        </div>
+    @endif
+
+    {{-- BAGIAN 1: KELOLA KATEGORI (Header) --}}
+    <div class="card mb-4 shadow-sm">
+        <div class="card-body bg-light">
+            <h5 class="card-title mb-3">1. Kelola Kategori (Group)</h5>
+            <div class="d-flex flex-wrap gap-2 align-items-center">
+                {{-- Form Tambah Kategori --}}
+                <form method="POST" action="{{ route('admin.category.store') }}" class="d-flex gap-2">
                     @csrf
-                    <input type="text" name="category" value="{{ $cat }}" class="form-control d-inline-block w-auto" style="width:160px;">
-                    <button type="submit" class="btn btn-primary btn-sm">Edit</button>
+                    <input type="text" name="category" class="form-control" placeholder="Nama Kategori Baru" required style="width: 200px;">
+                    <button type="submit" class="btn btn-success"><i class="fas fa-plus"></i> Tambah</button> 
                 </form>
-                <form method="POST" action="{{ url('form_fields/destroy-category/'.$cat) }}" class="d-inline-block">
-                    @csrf
-                    <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Hapus kategori {{ $cat }} beserta seluruh field di dalamnya?')">Hapus</button>
-                </form>
-            @endforeach
+            </div>
+            
+            <hr>
+
+            {{-- List Kategori yang Ada --}}
+            <div class="d-flex flex-wrap gap-3">
+                @foreach($categories as $cat)
+                    <div class="btn-group shadow-sm">
+                        {{-- Form Edit Kategori --}}
+                        <form method="POST" action="{{ route('admin.category.update', $cat) }}" class="d-flex">
+                            @csrf @method('PUT')
+                            <input type="text" name="category" value="{{ $cat }}" class="form-control form-control-sm border-end-0 rounded-0 rounded-start" style="width: 150px;">
+                            <button type="submit" class="btn btn-primary btn-sm rounded-0"><i class="fas fa-save"></i></button>
+                        </form>
+                        {{-- Form Hapus Kategori --}}
+                        <form method="POST" action="{{ route('admin.category.destroy', $cat) }}">
+                            @csrf @method('DELETE')
+                            <button type="submit" class="btn btn-danger btn-sm rounded-0 rounded-end" onclick="return confirm('Hapus kategori ini?')"><i class="fas fa-trash"></i></button>
+                        </form>
+                    </div>
+                @endforeach
+            </div>
         </div>
     </div>
-    <form method="POST" action="{{ route('form_fields.update_all') }}">
-    @csrf
-        @foreach($categories as $category)
-            <div class="card mb-3">
-                <div class="card-header p-0 border-0">
-                    <span class="category-label cat-{{ str_replace(' ', '\\ ', $category) }}">{{ $category }}</span>
-                </div>
-                <div class="card-body checklist-grid">
-                    @foreach($fieldsByCategory[$category] as $field)
-                        @if($field && is_object($field))
-                        <div class="form-check checklist-item d-flex align-items-center justify-content-between">
-                            <div>
-                                <input class="form-check-input" type="checkbox" name="fields[]" value="{{ $field->id }}" id="field_{{ $field->id }}" {{ $field->is_active ? 'checked' : '' }}>
-                                <label class="form-check-label" for="field_{{ $field->id }}">
-                                    {{ $field->label }}
-                                </label>
-                            </div>
-                        </div>
-                        @endif
-                    @endforeach
-                </div>
-            </div>
-        @endforeach
-        <button type="submit" class="btn btn-primary">Simpan Pengaturan</button>
-    </form>
+
+    {{-- BAGIAN 2: LIST FIELD PER KATEGORI --}}
     @foreach($categories as $category)
-        <div class="card-footer bg-light">
-            <form method="POST" action="{{ route('form_fields.storeField') }}" class="row g-2 align-items-center">
-                @csrf
-                <input type="hidden" name="category" value="{{ $category }}">
-                <div class="col-md-3">
-                    <input type="text" name="label" class="form-control form-control-sm" placeholder="Label Field" required>
+        <div class="card mb-4 shadow-sm border-top-0">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 text-white">{{ $category }}</h5>
+            </div>
+            
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover table-bordered mb-0 align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th width="5%" class="text-center">No</th>
+                                <th width="50%">Label (Pertanyaan)</th>
+                                {{-- Kolom Name SUDAH DIHAPUS --}}
+                                <th width="15%">Urutan</th>
+                                <th width="10%" class="text-center">Aktif</th>
+                                <th width="20%">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {{-- A. BARIS KHUSUS UNTUK TAMBAH FIELD BARU --}}
+                            <tr class="table-success">
+                                <form method="POST" action="{{ route('admin.form.storeField') }}">
+                                    @csrf
+                                    <input type="hidden" name="category" value="{{ $category }}">
+                                    
+                                    <td class="text-center fw-bold">+</td>
+                                    <td>
+                                        <input type="text" name="label" class="form-control form-control-sm" placeholder="Input Pertanyaan Baru..." required>
+                                        {{-- Input name dihapus karena otomatis dibuat controller --}}
+                                    </td>
+                                    <td>
+                                        <input type="number" name="order" class="form-control form-control-sm" value="0">
+                                    </td>
+                                    <td class="text-center">
+                                        <input type="checkbox" name="is_active" checked>
+                                    </td>
+                                    <td>
+                                        <button type="submit" class="btn btn-success btn-sm w-100 fw-bold">
+                                            <i class="fas fa-plus-circle"></i> TAMBAH
+                                        </button>
+                                    </td>
+                                </form>
+                            </tr>
+
+                            {{-- B. LOOPING FIELD YANG SUDAH ADA --}}
+                            @if(isset($fieldsByCategory[$category]))
+                                @foreach($fieldsByCategory[$category] as $index => $field)
+                                <tr>
+                                    {{-- Form Update --}}
+                                    <form method="POST" action="{{ route('admin.form.updateField', $field->id) }}">
+                                        @csrf @method('PUT')
+                                        
+                                        <td class="text-center">{{ $index + 1 }}</td>
+                                        <td>
+                                            <input type="text" name="label" value="{{ $field->label }}" class="form-control form-control-sm">
+                                        </td>
+                                        {{-- Kolom Display Name SUDAH DIHAPUS --}}
+                                        <td>
+                                            <input type="number" name="order" value="{{ $field->order }}" class="form-control form-control-sm">
+                                        </td>
+                                        <td class="text-center">
+                                            <div class="form-check d-flex justify-content-center">
+                                                <input class="form-check-input" type="checkbox" name="is_active" {{ $field->is_active ? 'checked' : '' }}>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="d-flex gap-1">
+                                                <button type="submit" class="btn btn-primary btn-sm" title="Simpan Perubahan">
+                                                    <i class="fas fa-save"></i> Update
+                                                </button>
+                                    </form> 
+                                                {{-- Tombol Hapus --}}
+                                                <form method="POST" action="{{ route('admin.form.destroyField', $field->id) }}" onsubmit="return confirm('Yakin hapus field ini?')">
+                                                    @csrf @method('DELETE')
+                                                    <button type="submit" class="btn btn-danger btn-sm" title="Hapus">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                </tr>
+                                @endforeach
+                            @endif
+                        </tbody>
+                    </table>
                 </div>
-                <div class="col-md-3">
-                    <input type="text" name="name" class="form-control form-control-sm" placeholder="Name (unik)" required>
-                </div>
-                <div class="col-md-2">
-                    <input type="number" name="order" class="form-control form-control-sm" placeholder="Urutan" min="0">
-                </div>
-                <div class="col-md-2">
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" name="is_active" id="active_{{ $category }}" checked>
-                        <label class="form-check-label" for="active_{{ $category }}">Aktif</label>
-                    </div>
-                </div>
-                <div class="col-md-2">
-                    <button type="submit" class="btn btn-success btn-sm">Tambah Field</button>
-                </div>
-            </form>
-            <div class="d-flex flex-wrap mt-2">
-                @foreach($fieldsByCategory[$category] as $field)
-                    @if($field && is_object($field))
-                    <form method="POST" action="{{ url('form_fields/'.$field->id.'/delete') }}" onsubmit="return confirm('Hapus field ini?')" style="display:inline-block;">
-                        @csrf
-                        <button type="submit" class="btn btn-sm btn-danger ms-2 mb-1" title="Hapus"><i class="fa fa-trash"></i> {{ $field->label }}</button>
-                    </form>
-                    @endif
-                @endforeach
             </div>
         </div>
     @endforeach
 </div>
-@endsection 
+@endsection

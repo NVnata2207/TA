@@ -1,116 +1,124 @@
 <?php
-// Menentukan lokasi file ini
+
 namespace App\Http\Controllers;
 
-// Import library yang dibutuhkan
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage; // Untuk mengelola file fisik (simpan/hapus file)
-use App\Models\UserDocument; // Model untuk tabel dokumen user
-use App\Models\Notification; // Model untuk tabel notifikasi
-use App\Models\User; // Model User
+use Illuminate\Support\Facades\Storage;
+use App\Models\UserDocument;
+use App\Models\Notification;
+use App\Models\User;
+use App\Models\DocumentRequirement;
 
 class UserDocumentController extends Controller
 {
     /**
-     * Fungsi index menampilkan halaman daftar dokumen milik user yang sedang login.
+     * Menampilkan halaman upload dokumen
      */
     public function index()
     {
-        // Ambil data user yang sedang login saat ini.
         $user = auth()->user();
+        
+        // Ambil daftar dokumen yang wajib diupload (dari database Admin)
+        $requirements = DocumentRequirement::where('is_active', 1)->get();
+        
+        // Load relasi dokumen user agar efisien
+        $user->load('documents'); 
 
-        // Daftar tipe dokumen yang wajib/bisa diupload.
-        $types = [
-            'formulir' => 'Formulir Pendaftaran',
-            'akta' => 'Akta Kelahiran',
-            'kk' => 'Kartu Keluarga',
-            'ijazah' => 'Ijazah (jika ada)'
-        ];
-
-        // Ambil dokumen dari database milik user tersebut.
-        // 'keyBy('type')' -> Mengubah struktur data agar index array-nya menggunakan nama tipe ('akta', 'kk', dll).
-        // Ini memudahkan pengecekan di View (misal: apakah user sudah upload 'akta'?).
-        $documents = UserDocument::where('user_id', $user->id)->get()->keyBy('type');
-
-        // Tampilkan view dan kirim datanya.
-        return view('user.documents.index', compact('types', 'documents'));
+        return view('user.documents.index', compact('user', 'requirements'));
     }
 
     /**
-     * Fungsi store menangani proses UPLOAD dokumen.
-     * Fungsi ini menangani upload baru MAUPUN penggantian file (replace).
+     * Proses Upload / Ganti Dokumen
      */
     public function store(Request $request)
     {
-        // Ambil user yang login.
+        // 1. Validasi
+        $request->validate([
+            'file' => 'required|mimes:pdf|max:2048',
+            'requirement_id' => 'required', 
+        ]);
+
         $user = auth()->user();
 
-        // Validasi input.
-        $request->validate([
-            'type' => 'required|in:formulir,akta,kk,ijazah', // Tipe harus sesuai daftar.
-            'file' => 'required|mimes:pdf|max:2048', // File wajib PDF dan maks 2MB (2048 KB).
-        ]);
+        if ($request->hasFile('file')) {
+            
+            // 2. HAPUS FILE LAMA (Jika ada)
+            $oldDoc = UserDocument::where('user_id', $user->id)
+                        ->where('requirement_id', $request->requirement_id)
+                        ->first();
 
-        // Simpan tipe dokumen ke variabel.
-        $type = $request->type;
+            if ($oldDoc) {
+                // Hapus file fisik lama
+                if (Storage::disk('public')->exists($oldDoc->file_path)) {
+                    Storage::disk('public')->delete($oldDoc->file_path);
+                }
+            }
 
-        // Cek apakah user sudah pernah upload dokumen tipe ini sebelumnya?
-        $old = UserDocument::where('user_id', $user->id)->where('type', $type)->first();
+            // 3. UPLOAD FILE BARU
+            $file = $request->file('file');
+            
+            $docName = $request->document_type ?? 'Dokumen';
+            // Nama file: NamaDokumen_NamaSiswa_Timestamp.pdf
+            $filename = str_replace(' ', '_', $docName) . '_' . str_replace(' ', '_', $user->name) . '_' . time() . '.pdf';
+            
+            $path = $file->storeAs('documents', $filename, 'public');
 
-        // Jika sudah ada file lama, HAPUS dulu file lamanya agar tidak menumpuk di server (sampah).
-        if ($old) {
-            Storage::delete($old->file_path); // Hapus file fisik dari folder storage.
-            $old->delete(); // Hapus data lama dari database.
+            // 4. SIMPAN KE DATABASE
+            UserDocument::updateOrCreate(
+                [
+                    'user_id' => $user->id,
+                    'requirement_id' => $request->requirement_id, 
+                ],
+                [
+                    'type' => $request->document_type, 
+                    'file_path' => $path,
+                ]
+            );
+            // 5. KIRIM NOTIFIKASI KE ADMIN
+            $admins = User::where('role', 'admin')->get();
+            
+            foreach ($admins as $admin) {
+                Notification::create([
+                    'user_id' => $admin->id, 
+                    'type' => 'admin', 
+                    'message' => $user->name.' telah mengupload/mengganti berkas: '.$docName,
+                    'read' => false,
+                    
+                    // 👇 INI KUNCINYA: Simpan Link Detail Siswa 👇
+                    // Pastikan route 'users.show' ada di web.php Anda (bawaan Route::resource users)
+                    'link' => route('users.show', $user->id),
+                ]);
+            }
+
+            return back()->with('success', 'Berkas berhasil diupload.');
         }
 
-        // Simpan file baru ke folder 'storage/app/public/user_documents/ID_USER'.
-        // File akan disimpan di folder spesifik per user agar rapi.
-        $path = $request->file('file')->store('user_documents/'.$user->id, 'public');
-
-        // Simpan data file baru ke database.
-        UserDocument::create([
-            'user_id' => $user->id,
-            'type' => $type,
-            'file_path' => $path,
-        ]);
-
-        // LOGIKA NOTIFIKASI KE ADMIN:
-        // Ambil semua user yang role-nya 'admin'.
-        $admins = User::where('role', 'admin')->get();
-        
-        // Loop ke setiap admin untuk dikirimi notifikasi.
-        foreach ($admins as $admin) {
-            Notification::create([
-                'user_id' => $admin->id, // ID Admin penerima notif.
-                'type' => 'admin', // Tipe notif untuk admin.
-                // Pesan: "NamaSiswa telah mengupload/mengganti berkas: Akta"
-                'message' => $user->name.' telah mengupload/mengganti berkas: '.ucwords($type),
-            ]);
-        }
-
-        // Kembali ke halaman sebelumnya dengan pesan sukses.
-        return back()->with('success', 'Berkas berhasil diupload.');
+        return back()->with('error', 'Gagal mengupload berkas.');
     }
 
     /**
-     * Fungsi destroy untuk menghapus dokumen tertentu.
-     * Menerima parameter $type (misal: 'akta', 'kk') bukan ID, karena satu tipe cuma boleh satu file.
+     * Hapus Dokumen
+     * Sekarang menerima parameter $id (ID Dokumen), bukan string type
      */
-    public function destroy($type)
+    public function destroy($id)
     {
-        // Ambil user yang login.
         $user = auth()->user();
 
-        // Cari dokumen berdasarkan user_id dan tipe dokumennya.
-        $doc = UserDocument::where('user_id', $user->id)->where('type', $type)->first();
+        // Cari dokumen berdasarkan ID (dan pastikan milik user yang sedang login)
+        $doc = UserDocument::where('id', $id)->where('user_id', $user->id)->first();
 
-        // Jika dokumen ditemukan, hapus.
         if ($doc) {
-            Storage::delete($doc->file_path); // Hapus file fisiknya.
-            $doc->delete(); // Hapus datanya dari database.
+            // Hapus file fisik
+            if (Storage::disk('public')->exists($doc->file_path)) {
+                Storage::disk('public')->delete($doc->file_path);
+            }
+            
+            // Hapus data database
+            $doc->delete();
+            
+            return back()->with('success', 'Berkas berhasil dihapus.');
         }
 
-        //  Kembali dengan pesan sukses.
-        return back()->with('success', 'Berkas berhasil dihapus.');
+        return back()->with('error', 'Berkas tidak ditemukan.');
     }
 }

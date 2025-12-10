@@ -10,13 +10,38 @@ use App\Models\Notification;
 use App\Models\User;
 use App\Models\UserDocument;
 use App\Models\FormField;
+use App\Models\DocumentRequirement;
 
 class UserController extends Controller
 {
-    public function index()
+public function index(Request $request)
     {
-        $activeYear = AcademicYear::where('is_active', true)->first();
-        $users = User::where('academic_year_id', $activeYear?->id)->orderByDesc('created_at')->paginate(10);
+        // 1. Ambil Tahun Ajaran Aktif
+        $activeYear = \App\Models\AcademicYear::where('is_active', true)->first();
+
+        // 2. Dasar Query: Cari User yang Role-nya 'user' (Siswa)
+        $query = \App\Models\User::where('role', 'user');
+
+        // Jika ada tahun ajaran aktif, filter hanya siswa tahun ini
+        if ($activeYear) {
+            $query->where('academic_year_id', $activeYear->id);
+        }
+
+        // 3. LOGIKA PENCARIAN (SEARCH)
+        // Jika ada input 'search' dari form, tambahkan filter ini
+        if ($request->filled('search')) {
+            $keyword = $request->search;
+            $query->where(function ($q) use ($keyword) {
+                $q->where('name', 'LIKE', '%' . $keyword . '%')
+                  ->orWhere('nisn', 'LIKE', '%' . $keyword . '%')
+                  ->orWhere('kode_pendaftaran', 'LIKE', '%' . $keyword . '%');
+            });
+        }
+
+        // 4. Ambil Data (Paginate)
+        // withQueryString() berguna agar saat pindah halaman (page 2), hasil pencarian tidak hilang
+        $users = $query->orderByDesc('created_at')->paginate(10)->withQueryString();
+
         return view('admin.users.index', compact('users'));
     }
 
@@ -30,18 +55,18 @@ class UserController extends Controller
         //
     }
 
+// Pastikan di bagian atas file sudah ada: 
+    // use App\Models\DocumentRequirement;
+    // use App\Models\Notification;
+
     public function show($id)
     {
-        $user = User::findOrFail($id);
-        $documents = UserDocument::where('user_id', $user->id)->get()->keyBy('type');
-        
-        $types = [
-            'formulir' => 'Formulir Pendaftaran',
-            'akta' => 'Akta Kelahiran',
-            'kk' => 'Kartu Keluarga',
-            'ijazah' => 'Ijazah (jika ada)'
-        ];
+        // 1. AMBIL DATA SISWA & DOKUMENNYA
+        // Kita pakai 'with' agar lebih efisien
+        $user = User::with('documents')->findOrFail($id);
 
+        // 2. LOGIKA NOTIFIKASI (DIPERTAHANKAN DARI KODINGAN LAMA)
+        // Agar saat diklik dari notifikasi, statusnya berubah jadi 'read'
         if (request('notif')) {
             $notif = Notification::find(request('notif'));
             if ($notif && $notif->user_id == auth()->id()) {
@@ -50,13 +75,14 @@ class UserController extends Controller
             }
         }
 
-        return view('admin.users.show', compact('user', 'documents', 'types'));
-    }
+        // 3. AMBIL DAFTAR SYARAT DOKUMEN (DINAMIS)
+        // Ini menggantikan array manual $types = [...] yang lama.
+        $requirements = DocumentRequirement::where('is_active', 1)->get();
 
-    public function edit(string $id)
-    {
-        //
-    }
+        // 4. KIRIM KE VIEW
+        // Kita tidak perlu lagi kirim $types atau $documents terpisah
+        return view('admin.users.show', compact('user', 'requirements'));
+    } 
 
     public function update(Request $request, User $user)
     {
@@ -112,24 +138,22 @@ class UserController extends Controller
 
     public function downloadRegistrationForm()
     {
-        $user = auth()->user();
+        // 1. Ambil Tahun Ajaran Aktif
+        $academicYear = \App\Models\AcademicYear::where('is_active', 1)->first();
+
+        // 2. Ambil Field Formulir (Pertanyaan)
+        $fields = \App\Models\FormField::where('is_active', 1)
+                            ->orderBy('order', 'asc')
+                            ->get();
+
+        // 3. (BARU) AMBIL MASTER DOKUMEN DARI DATABASE
+        // Ini agar lampiran di PDF dinamis mengikuti Admin
+        $documents = \App\Models\DocumentRequirement::where('is_active', 1)->get();
+
+        // 4. Load View dengan membawa data $documents
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('user.print_registration', compact('academicYear', 'fields', 'documents'));
         
-        $fields = FormField::where('is_active', true)
-            ->orderBy('category')
-            ->orderBy('order')
-            ->get();
-            
-        $academicYear = AcademicYear::where('is_active', 1)->first();
-        
-        $data = [
-            'user' => $user,
-            'fields' => $fields,
-            'academicYear' => $academicYear,
-        ];
-        
-        $pdf = app('dompdf.wrapper')->loadView('pdf.registration_form', $data);
-        
-        return $pdf->download('formulir_pendaftaran_'.$user->kode_pendaftaran.'.pdf');
+        return $pdf->stream('Formulir-PPDB.pdf');
     }
 
     // ==========================================
@@ -151,7 +175,7 @@ class UserController extends Controller
         $pdf = Pdf::loadView('pdf.acceptance_letter', compact('user', 'activeYear'));
         $pdf->setPaper('a4', 'portrait');
 
-        return $pdf->download('Bukti_Lulus_' . $user->kode_pendaftaran . '.pdf');
+        return $pdf->download('Bukti_Lulus_' . $user->kode_pendaftaran . '.Pdf');
     }
 
     public function bulkDelete(Request $request)
@@ -231,5 +255,43 @@ class UserController extends Controller
             echo '</body></html>';
             
         }, $fileName, $headers);
+    }
+    // =======================================================================
+    // TAMBAHKAN INI AGAR ERROR "METHOD DOES NOT EXIST" HILANG
+    // =======================================================================
+
+    public function showForm()
+    {
+        // Ambil data user yang sedang login
+        $user = auth()->user();
+        
+        // Tampilkan file view formulir
+        return view('user.form_registration', compact('user'));
+    }
+
+   public function updateProfile(Request $request)
+    {
+    $user = auth()->user();
+
+    // 1. Validasi (Sesuaikan kebutuhan)
+    $request->validate([
+        'name' => 'required|string',
+        'nisn' => 'nullable|numeric',
+        // ... validasi lain ...
+    ]);
+
+    // 2. Simpan Data Akun Utama (Nama di tabel users)
+    $user->update([
+        'name' => $request->name
+    ]);
+
+    // 3. Simpan Data Detail Siswa (Di tabel student_details)
+    // updateOrCreate: Jika belum ada data detail, buat baru. Jika sudah ada, update.
+    $user->studentDetail()->updateOrCreate(
+        ['user_id' => $user->id], // Kunci pencarian
+        $request->except(['_token', '_method', 'name', 'email']) // Data yang disimpan (kecuali token & data user utama)
+    );
+
+    return redirect()->back()->with('success', 'Data biodata berhasil disimpan!');
     }
 } // <--- Penutup Class (Jangan Dihapus)
