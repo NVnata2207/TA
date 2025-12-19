@@ -2,46 +2,58 @@
 @section('page_title', 'Formulir Pendaftaran')
 
 @section('content')
+
+@php
+    $user = auth()->user();
+    // Logika Kunci: Jika hasil sudah keluar (Diterima/Tidak), form terkunci.
+    $isLocked = ($user->hasil === 'Di Terima' || $user->hasil === 'Tidak Diterima');
+@endphp
+
 <div class="container-fluid">
-    
-    {{-- 1. NOTIFIKASI SUKSES (ALERT BAR) --}}
+
+    {{-- Alert Sukses/Error --}}
     @if(session('success'))
-    <div class="row justify-content-center">
-        <div class="col-md-10">
-            <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert" style="border-left: 5px solid #155724; background-color: #d4edda; color: #155724;">
-                <div class="d-flex align-items-center">
-                    <i class="fas fa-check-circle fa-2x mr-3"></i>
-                    <div>
-                        <strong>Berhasil Disimpan!</strong> {{ session('success') }}
+        <div class="row justify-content-center">
+            <div class="col-md-10">
+                <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert" style="border-left: 5px solid #155724; background-color: #d4edda; color: #155724;">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-check-circle fa-2x mr-3"></i>
+                        <div><strong>Berhasil Disimpan!</strong> {{ session('success') }}</div>
                     </div>
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
                 </div>
-                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
             </div>
         </div>
-    </div>
     @endif
 
-    {{-- 2. NOTIFIKASI ERROR (JIKA ADA) --}}
     @if($errors->any())
-    <div class="row justify-content-center">
-        <div class="col-md-10">
-            <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert" style="border-left: 5px solid #dc3545;">
-                <div class="d-flex align-items-center">
-                    <i class="fas fa-exclamation-triangle fa-2x mr-3"></i>
-                    <div>
-                        <strong>Gagal!</strong> Mohon periksa kembali inputan Anda.
-                        <ul class="mb-0 mt-1 pl-3">
-                            @foreach ($errors->all() as $error)
-                                <li>{{ $error }}</li>
-                            @endforeach
-                        </ul>
+        <div class="row justify-content-center">
+            <div class="col-md-10">
+                <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert" style="border-left: 5px solid #dc3545;">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-exclamation-triangle fa-2x mr-3"></i>
+                        <div>
+                            <strong>Gagal!</strong> Mohon periksa kembali inputan Anda.
+                            <ul class="mb-0 mt-1 pl-3">
+                                @foreach ($errors->all() as $error)
+                                    <li>{{ $error }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
                     </div>
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
                 </div>
-                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
+            </div>
+        </div>
+    @endif
+
+    {{-- PESAN PERINGATAN JIKA TERKUNCI --}}
+    @if($isLocked)
+    <div class="row justify-content-center mb-3">
+        <div class="col-md-10">
+            <div class="alert alert-warning shadow-sm border-left-warning">
+                <i class="fas fa-lock fa-lg me-2"></i> 
+                <b>Akses Ditutup:</b> Masa seleksi telah berakhir (Status: <b>{{ $user->hasil }}</b>). Anda tidak dapat mengubah data lagi.
             </div>
         </div>
     </div>
@@ -85,8 +97,7 @@
                                     <div class="input-group-prepend">
                                         <span class="input-group-text bg-light border-right-0" style="border: 2px solid #6c757d; border-right: none;"><i class="fas fa-hashtag text-muted"></i></span>
                                     </div>
-                                    {{-- Value: Mengambil data lama (old) atau data dari database ($user->studentDetail->nisn) --}}
-                                    <input type="number" name="nisn" class="form-control border-left-0" value="{{ old('nisn', $user->studentDetail->nisn ?? '') }}" placeholder="NISN" style="border: 2px solid #6c757d; border-left: none;">
+                                    <input type="number" name="nisn" class="form-control border-left-0" value="{{ old('nisn', $user->studentDetail->nisn ?? '') }}" placeholder="NISN" style="border: 2px solid #6c757d; border-left: none;" {{ $isLocked ? 'disabled' : '' }}>
                                 </div>
                             </div>
 
@@ -97,7 +108,7 @@
                                     <div class="input-group-prepend">
                                         <span class="input-group-text bg-light border-right-0" style="border: 2px solid #6c757d; border-right: none;"><i class="fas fa-user text-muted"></i></span>
                                     </div>
-                                    <input type="text" name="name" class="form-control border-left-0" value="{{ old('name', $user->name) }}" placeholder="Nama Sesuai Ijazah" style="border: 2px solid #6c757d; border-left: none;">
+                                    <input type="text" name="name" class="form-control border-left-0" value="{{ old('name', $user->name) }}" placeholder="Nama Sesuai Ijazah" style="border: 2px solid #6c757d; border-left: none;" {{ $isLocked ? 'disabled' : '' }}>
                                 </div>
                             </div>
 
@@ -108,7 +119,7 @@
                                     <div class="input-group-prepend">
                                         <span class="input-group-text bg-light border-right-0" style="border: 2px solid #6c757d; border-right: none;"><i class="fas fa-id-badge text-muted"></i></span>
                                     </div>
-                                    <input type="number" name="nik" class="form-control border-left-0" value="{{ old('nik', $user->studentDetail->nik ?? '') }}" placeholder="NIK" style="border: 2px solid #6c757d; border-left: none;">
+                                    <input type="number" name="nik" class="form-control border-left-0" value="{{ old('nik', $user->studentDetail->nik ?? '') }}" placeholder="NIK" style="border: 2px solid #6c757d; border-left: none;" {{ $isLocked ? 'disabled' : '' }}>
                                 </div>
                             </div>
 
@@ -119,7 +130,7 @@
                                     <div class="input-group-prepend">
                                         <span class="input-group-text bg-light border-right-0" style="border: 2px solid #6c757d; border-right: none;"><i class="fas fa-school text-muted"></i></span>
                                     </div>
-                                    <select class="form-control custom-select border-left-0" name="jenjang" style="border: 2px solid #6c757d; border-left: none;">
+                                    <select class="form-control custom-select border-left-0" name="jenjang" style="border: 2px solid #6c757d; border-left: none;" {{ $isLocked ? 'disabled' : '' }}>
                                         <option value="">-- Pilih --</option>
                                         <option value="SD" {{ (old('jenjang', $user->studentDetail->jenjang ?? '') == 'SD') ? 'selected' : '' }}>SD / MI</option>
                                         <option value="SMP" {{ (old('jenjang', $user->studentDetail->jenjang ?? '') == 'SMP') ? 'selected' : '' }}>SMP / MTs</option>
@@ -134,7 +145,7 @@
                                     <div class="input-group-prepend">
                                         <span class="input-group-text bg-light border-right-0" style="border: 2px solid #6c757d; border-right: none;"><i class="fas fa-graduation-cap text-muted"></i></span>
                                     </div>
-                                    <input type="text" name="asal_sekolah" class="form-control border-left-0" value="{{ old('asal_sekolah', $user->studentDetail->asal_sekolah ?? '') }}" placeholder="Contoh: SDN 1 Jakarta" style="border: 2px solid #6c757d; border-left: none;">
+                                    <input type="text" name="asal_sekolah" class="form-control border-left-0" value="{{ old('asal_sekolah', $user->studentDetail->asal_sekolah ?? '') }}" placeholder="Contoh: SDN 1 Jakarta" style="border: 2px solid #6c757d; border-left: none;" {{ $isLocked ? 'disabled' : '' }}>
                                 </div>
                             </div>
                         </div>
@@ -149,7 +160,7 @@
                                             <i class="fas fa-map-marker-alt text-muted"></i>
                                         </span>
                                     </div>
-                                    <input type="text" name="tempat_lahir" class="form-control border-left-0" value="{{ old('tempat_lahir', $user->studentDetail->tempat_lahir ?? '') }}" placeholder="Kota Lahir" style="border: 2px solid #6c757d; border-left: none;">
+                                    <input type="text" name="tempat_lahir" class="form-control border-left-0" value="{{ old('tempat_lahir', $user->studentDetail->tempat_lahir ?? '') }}" placeholder="Kota Lahir" style="border: 2px solid #6c757d; border-left: none;" {{ $isLocked ? 'disabled' : '' }}>
                                 </div>
                             </div>
 
@@ -158,23 +169,21 @@
                                 <label class="font-weight-bold small text-secondary">Tanggal Lahir</label>
                                 <div class="input-group">
                                     <div class="input-group-prepend">
-                                        {{-- Style: Border tebal, kanan dimatikan --}}
                                         <span class="input-group-text bg-white" style="border: 2px solid #6c757d; border-right: none;">
                                             <i class="fas fa-calendar-alt text-muted"></i>
                                         </span>
                                     </div>
-                                    {{-- Style: Border tebal, kiri dimatikan --}}
                                     <input type="date" name="tanggal_lahir" class="form-control" 
                                            value="{{ old('tanggal_lahir', $user->studentDetail->tanggal_lahir ?? '') }}" 
                                            max="{{ date('Y-m-d') }}"
-                                           style="border: 2px solid #6c757d; border-left: none;">
+                                           style="border: 2px solid #6c757d; border-left: none;" {{ $isLocked ? 'disabled' : '' }}>
                                 </div>
                             </div>
 
                             {{-- JENIS KELAMIN --}}
                             <div class="col-md-3 mb-3">
                                 <label class="form-label text-secondary small font-weight-bold">Jenis Kelamin</label>
-                                <select class="form-control custom-select" name="gender" style="border: 2px solid #6c757d;">
+                                <select class="form-control custom-select" name="gender" style="border: 2px solid #6c757d;" {{ $isLocked ? 'disabled' : '' }}>
                                     <option value="">-- Pilih --</option>
                                     <option value="L" {{ (old('gender', $user->studentDetail->gender ?? '') == 'L') ? 'selected' : '' }}>Laki-laki</option>
                                     <option value="P" {{ (old('gender', $user->studentDetail->gender ?? '') == 'P') ? 'selected' : '' }}>Perempuan</option>
@@ -184,7 +193,7 @@
                             {{-- AGAMA --}}
                             <div class="col-md-3 mb-3">
                                 <label class="form-label text-secondary small font-weight-bold">Agama</label>
-                                <select class="form-control custom-select" name="agama" style="border: 2px solid #6c757d;">
+                                <select class="form-control custom-select" name="agama" style="border: 2px solid #6c757d;" {{ $isLocked ? 'disabled' : '' }}>
                                     <option value="Islam" {{ (old('agama', $user->studentDetail->agama ?? '') == 'Islam') ? 'selected' : '' }}>Islam</option>
                                     <option value="Kristen" {{ (old('agama', $user->studentDetail->agama ?? '') == 'Kristen') ? 'selected' : '' }}>Kristen</option>
                                     <option value="Katolik" {{ (old('agama', $user->studentDetail->agama ?? '') == 'Katolik') ? 'selected' : '' }}>Katolik</option>
@@ -198,7 +207,7 @@
                             {{-- GOLONGAN DARAH --}}
                             <div class="col-md-3 mb-3">
                                 <label class="form-label text-secondary small font-weight-bold">Gol. Darah</label>
-                                <select class="form-control custom-select" name="golongan_darah" style="border: 2px solid #6c757d;">
+                                <select class="form-control custom-select" name="golongan_darah" style="border: 2px solid #6c757d;" {{ $isLocked ? 'disabled' : '' }}>
                                     <option value="">-</option>
                                     <option value="A" {{ (old('golongan_darah', $user->studentDetail->golongan_darah ?? '') == 'A') ? 'selected' : '' }}>A</option>
                                     <option value="B" {{ (old('golongan_darah', $user->studentDetail->golongan_darah ?? '') == 'B') ? 'selected' : '' }}>B</option>
@@ -214,14 +223,14 @@
                                     <div class="input-group-prepend">
                                         <span class="input-group-text bg-light border-right-0" style="border: 2px solid #6c757d; border-right: none;"><i class="fas fa-flag text-muted"></i></span>
                                     </div>
-                                    <input type="text" name="kewarganegaraan" class="form-control border-left-0" value="{{ old('kewarganegaraan', $user->studentDetail->kewarganegaraan ?? 'WNI') }}" placeholder="WNI" style="border: 2px solid #6c757d; border-left: none;">
+                                    <input type="text" name="kewarganegaraan" class="form-control border-left-0" value="{{ old('kewarganegaraan', $user->studentDetail->kewarganegaraan ?? 'WNI') }}" placeholder="WNI" style="border: 2px solid #6c757d; border-left: none;" {{ $isLocked ? 'disabled' : '' }}>
                                 </div>
                             </div>
 
                             {{-- TEMPAT TINGGAL --}}
                             <div class="col-md-5 mb-3">
                                 <label class="form-label text-secondary small font-weight-bold">Tempat Tinggal</label>
-                                <select class="form-control custom-select" name="tempat_tinggal" style="border: 2px solid #6c757d;">
+                                <select class="form-control custom-select" name="tempat_tinggal" style="border: 2px solid #6c757d;" {{ $isLocked ? 'disabled' : '' }}>
                                     <option value="">-- Pilih --</option>
                                     <option value="Bersama Orang Tua" {{ (old('tempat_tinggal', $user->studentDetail->tempat_tinggal ?? '') == 'Bersama Orang Tua') ? 'selected' : '' }}>Bersama Orang Tua</option>
                                     <option value="Wali" {{ (old('tempat_tinggal', $user->studentDetail->tempat_tinggal ?? '') == 'Wali') ? 'selected' : '' }}>Wali</option>
@@ -239,7 +248,7 @@
                                     <div class="input-group-prepend">
                                         <span class="input-group-text bg-light border-right-0" style="border: 2px solid #6c757d; border-right: none;"><i class="fas fa-home text-muted"></i></span>
                                     </div>
-                                    <textarea name="alamat" class="form-control border-left-0" rows="2" placeholder="Jalan, RT/RW, Kelurahan, Kecamatan" style="border: 2px solid #6c757d; border-left: none;">{{ old('alamat', $user->studentDetail->alamat ?? '') }}</textarea>
+                                    <textarea name="alamat" class="form-control border-left-0" rows="2" placeholder="Jalan, RT/RW, Kelurahan, Kecamatan" style="border: 2px solid #6c757d; border-left: none;" {{ $isLocked ? 'disabled' : '' }}>{{ old('alamat', $user->studentDetail->alamat ?? '') }}</textarea>
                                 </div>
                             </div>
                         </div>
@@ -262,12 +271,12 @@
                                     <div class="input-group-prepend">
                                         <span class="input-group-text bg-light border-right-0" style="border: 2px solid #6c757d; border-right: none;"><i class="fas fa-male text-muted"></i></span>
                                     </div>
-                                    <input type="text" name="nama_ayah" class="form-control border-left-0" value="{{ old('nama_ayah', $user->studentDetail->nama_ayah ?? '') }}" placeholder="Nama Ayah" style="border: 2px solid #6c757d; border-left: none;">
+                                    <input type="text" name="nama_ayah" class="form-control border-left-0" value="{{ old('nama_ayah', $user->studentDetail->nama_ayah ?? '') }}" placeholder="Nama Ayah" style="border: 2px solid #6c757d; border-left: none;" {{ $isLocked ? 'disabled' : '' }}>
                                 </div>
                             </div>
                             <div class="col-md-4 mb-3">
                                 <label class="form-label text-secondary small font-weight-bold">Pendidikan Ayah</label>
-                                <select name="pendidikan_ayah" class="form-control custom-select" style="border: 2px solid #6c757d;">
+                                <select name="pendidikan_ayah" class="form-control custom-select" style="border: 2px solid #6c757d;" {{ $isLocked ? 'disabled' : '' }}>
                                     <option value="">-- Pilih --</option>
                                     <option value="SD" {{ (old('pendidikan_ayah', $user->studentDetail->pendidikan_ayah ?? '') == 'SD') ? 'selected' : '' }}>SD</option>
                                     <option value="SMP" {{ (old('pendidikan_ayah', $user->studentDetail->pendidikan_ayah ?? '') == 'SMP') ? 'selected' : '' }}>SMP</option>
@@ -279,7 +288,7 @@
                             </div>
                             <div class="col-md-4 mb-3">
                                 <label class="form-label text-secondary small font-weight-bold">Pekerjaan Ayah</label>
-                                <input type="text" name="pekerjaan_ayah" class="form-control" value="{{ old('pekerjaan_ayah', $user->studentDetail->pekerjaan_ayah ?? '') }}" placeholder="Pekerjaan Ayah" style="border: 2px solid #6c757d;">
+                                <input type="text" name="pekerjaan_ayah" class="form-control" value="{{ old('pekerjaan_ayah', $user->studentDetail->pekerjaan_ayah ?? '') }}" placeholder="Pekerjaan Ayah" style="border: 2px solid #6c757d;" {{ $isLocked ? 'disabled' : '' }}>
                             </div>
                         </div>
 
@@ -291,12 +300,12 @@
                                     <div class="input-group-prepend">
                                         <span class="input-group-text bg-light border-right-0" style="border: 2px solid #6c757d; border-right: none;"><i class="fas fa-female text-muted"></i></span>
                                     </div>
-                                    <input type="text" name="nama_ibu" class="form-control border-left-0" value="{{ old('nama_ibu', $user->studentDetail->nama_ibu ?? '') }}" placeholder="Nama Ibu" style="border: 2px solid #6c757d; border-left: none;">
+                                    <input type="text" name="nama_ibu" class="form-control border-left-0" value="{{ old('nama_ibu', $user->studentDetail->nama_ibu ?? '') }}" placeholder="Nama Ibu" style="border: 2px solid #6c757d; border-left: none;" {{ $isLocked ? 'disabled' : '' }}>
                                 </div>
                             </div>
                             <div class="col-md-4 mb-3">
                                 <label class="form-label text-secondary small font-weight-bold">Pendidikan Ibu</label>
-                                <select name="pendidikan_ibu" class="form-control custom-select" style="border: 2px solid #6c757d;">
+                                <select name="pendidikan_ibu" class="form-control custom-select" style="border: 2px solid #6c757d;" {{ $isLocked ? 'disabled' : '' }}>
                                     <option value="">-- Pilih --</option>
                                     <option value="SD" {{ (old('pendidikan_ibu', $user->studentDetail->pendidikan_ibu ?? '') == 'SD') ? 'selected' : '' }}>SD</option>
                                     <option value="SMP" {{ (old('pendidikan_ibu', $user->studentDetail->pendidikan_ibu ?? '') == 'SMP') ? 'selected' : '' }}>SMP</option>
@@ -308,7 +317,7 @@
                             </div>
                             <div class="col-md-4 mb-3">
                                 <label class="form-label text-secondary small font-weight-bold">Pekerjaan Ibu</label>
-                                <input type="text" name="pekerjaan_ibu" class="form-control" value="{{ old('pekerjaan_ibu', $user->studentDetail->pekerjaan_ibu ?? '') }}" placeholder="Pekerjaan Ibu" style="border: 2px solid #6c757d;">
+                                <input type="text" name="pekerjaan_ibu" class="form-control" value="{{ old('pekerjaan_ibu', $user->studentDetail->pekerjaan_ibu ?? '') }}" placeholder="Pekerjaan Ibu" style="border: 2px solid #6c757d;" {{ $isLocked ? 'disabled' : '' }}>
                             </div>
                         </div>
 
@@ -320,7 +329,7 @@
                                     <div class="input-group-prepend">
                                         <span class="input-group-text bg-light border-right-0" style="border: 2px solid #6c757d; border-right: none;">Rp</span>
                                     </div>
-                                    <select name="penghasilan_ortu" class="form-control custom-select border-left-0" style="border: 2px solid #6c757d; border-left: none;">
+                                    <select name="penghasilan_ortu" class="form-control custom-select border-left-0" style="border: 2px solid #6c757d; border-left: none;" {{ $isLocked ? 'disabled' : '' }}>
                                         <option value="">-- Pilih Kisaran --</option>
                                         <option value="< 1 Juta" {{ (old('penghasilan_ortu', $user->studentDetail->penghasilan_ortu ?? '') == '< 1 Juta') ? 'selected' : '' }}>Kurang dari 1 Juta</option>
                                         <option value="1 - 3 Juta" {{ (old('penghasilan_ortu', $user->studentDetail->penghasilan_ortu ?? '') == '1 - 3 Juta') ? 'selected' : '' }}>1 - 3 Juta</option>
@@ -336,7 +345,7 @@
                                     <div class="input-group-prepend">
                                         <span class="input-group-text bg-light border-right-0" style="border: 2px solid #6c757d; border-right: none;"><i class="fab fa-whatsapp text-muted"></i></span>
                                     </div>
-                                    <input type="text" name="no_hp" class="form-control border-left-0" value="{{ old('no_hp', $user->studentDetail->no_hp ?? '') }}" placeholder="08xxxxxxxxxx" style="border: 2px solid #6c757d; border-left: none;">
+                                    <input type="number" name="no_hp" class="form-control border-left-0" value="{{ old('no_hp', $user->studentDetail->no_hp ?? '') }}" placeholder="08xxxxxxxxxx" style="border: 2px solid #6c757d; border-left: none;" {{ $isLocked ? 'disabled' : '' }}>
                                 </div>
                             </div>
                         </div>
@@ -348,19 +357,99 @@
                                     <div class="input-group-prepend">
                                         <span class="input-group-text bg-light border-right-0" style="border: 2px solid #6c757d; border-right: none;"><i class="fas fa-envelope text-muted"></i></span>
                                     </div>
+                                    {{-- Email sudah readonly dari awal --}}
                                     <input type="email" name="email" class="form-control border-left-0 bg-light" value="{{ $user->email }}" readonly style="border: 2px solid #6c757d; border-left: none;">
                                 </div>
                             </div>
                         </div>
 
+                        <hr class="my-4 dashed-border">
+
+                        {{-- ==================================================== --}}
+                        {{-- BAGIAN 3: AFIRMASI --}}
+                        {{-- ==================================================== --}}
+
+                        <div class="d-flex align-items-center mb-3">
+                            <span class="bg-success text-white rounded-circle d-flex justify-content-center align-items-center mr-2" style="width: 30px; height: 30px; font-weight: bold;">3</span>
+                            <h6 class="text-success font-weight-bold mb-0">AFIRMASI</h6>
+                        </div>
+
+                        <div class="row">
+                            {{-- 1. KKH --}}
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label text-secondary small font-weight-bold">No. Kartu Keluarga Harapan (KKH)</label>
+                                <div class="input-group">
+                                    <div class="input-group-prepend">
+                                        {{-- Ikon Kartu --}}
+                                        <span class="input-group-text bg-light border-right-0" style="border: 2px solid #6c757d; border-right: none;">
+                                            <i class="fas fa-id-card text-muted"></i>
+                                        </span>
+                                    </div>
+                                    <input type="number" name="no_kkh" class="form-control border-left-0" 
+                                           value="{{ old('no_kkh', $user->studentDetail->no_kkh ?? '') }}" 
+                                           placeholder="123456789"
+                                           style="border: 2px solid #6c757d; border-left: none;" {{ $isLocked ? 'disabled' : '' }}>
+                                </div>
+                            </div>
+
+                            {{-- 2. KKS --}}
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label text-secondary small font-weight-bold">No. Kartu Keluarga Sejahtera (KKS)</label>
+                                <div class="input-group">
+                                    <div class="input-group-prepend">
+                                        <span class="input-group-text bg-light border-right-0" style="border: 2px solid #6c757d; border-right: none;">
+                                            <i class="fas fa-id-card text-muted"></i>
+                                        </span>
+                                    </div>
+                                    <input type="number" name="no_kks" class="form-control border-left-0" 
+                                           value="{{ old('no_kks', $user->studentDetail->no_kks ?? '') }}" 
+                                           placeholder="123456789"
+                                           style="border: 2px solid #6c757d; border-left: none;" {{ $isLocked ? 'disabled' : '' }}>
+                                </div>
+                            </div>
+
+                            {{-- 3. KIP --}}
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label text-secondary small font-weight-bold">No. Kartu Indonesia Pintar (KIP)</label>
+                                <div class="input-group">
+                                    <div class="input-group-prepend">
+                                        <span class="input-group-text bg-light border-right-0" style="border: 2px solid #6c757d; border-right: none;">
+                                            <i class="fas fa-id-card text-muted"></i>
+                                        </span>
+                                    </div>
+                                    <input type="number" name="no_kip" class="form-control border-left-0" 
+                                           value="{{ old('no_kip', $user->studentDetail->no_kip ?? '') }}" 
+                                           placeholder="123456789"
+                                           style="border: 2px solid #6c757d; border-left: none;" {{ $isLocked ? 'disabled' : '' }}>
+                                </div>
+                            </div>
+
+                            {{-- 4. KIS --}}
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label text-secondary small font-weight-bold">No. Kartu Indonesia Sehat (KIS)</label>
+                                <div class="input-group">
+                                    <div class="input-group-prepend">
+                                        <span class="input-group-text bg-light border-right-0" style="border: 2px solid #6c757d; border-right: none;">
+                                            <i class="fas fa-id-card text-muted"></i>
+                                        </span>
+                                    </div>
+                                    <input type="number" name="no_kis" class="form-control border-left-0" 
+                                           value="{{ old('no_kis', $user->studentDetail->no_kis ?? '') }}" 
+                                           placeholder="123456789"
+                                           style="border: 2px solid #6c757d; border-left: none;" {{ $isLocked ? 'disabled' : '' }}>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     
-                    {{-- FOOTER TOMBOL --}}
+                    {{-- FOOTER TOMBOL: HANYA MUNCUL JIKA TIDAK TERKUNCI --}}
+                    @if(!$isLocked)
                     <div class="card-footer bg-light text-right py-3">
                         <button type="submit" class="btn btn-success px-5 font-weight-bold shadow-sm rounded-pill">
                             <i class="fas fa-save mr-2"></i> SIMPAN PERUBAHAN
                         </button>
                     </div>
+                    @endif
 
                 </form>
             </div>

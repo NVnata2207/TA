@@ -41,9 +41,9 @@
             </td>
             <td>
                 <div class="school-title">DINAS PENDIDIKAN KEBUDAYAAN PEMUDA DAN OLAH RAGA</div>
-                <div class="school-title">SEKOLAH DASAR NEGERI NO. 200/VIII SUNGAI KARANG</div>
-                <div class="school-subtitle">KECAMATAN VII KOTO ILIR KABUPATEN TEBO</div>
-                <div class="school-subtitle">Jl. Poros Ds. Sungai Karang, Kec. VII Koto Ilir, Kab. Tebo, Prov. Jambi, 37235 <br> Website: www.sd200.sch.id</div>
+                <div class="school-title">YAYASAN INSAN MADANI MULIA</div>
+                <div class="school-subtitle">KECAMATAN GEGER, KABUPATEN MADIUN</div>
+                <div class="school-subtitle">JL Segaran Permai, Klotok, Jatisari, Kec. Geger, Kabupaten Madiun, Jawa Timur 63171</div>
             </td>
         </tr>
     </table>
@@ -52,7 +52,7 @@
     <div class="form-number">Nomor: {{ $user->id }}/SKL/PPDB/{{ date('Y') }}</div>
 
     <div style="margin-top: 20px;">
-        <p>Panitia Penerimaan Peserta Didik Baru (PPDB) SDN NO. 200/VIII SUNGAI KARANG Tahun Pelajaran <b>{{ $activeYear->name ?? date('Y') }}</b>, dengan ini menerangkan bahwa:</p>
+        <p>Panitia Penerimaan Peserta Didik Baru (PPDB) YAYASAN INSAN MADANI MULIA <b>{{ $activeYear->name ?? date('Y') }}</b>, dengan ini menerangkan bahwa:</p>
     </div>
 
     <table class="table-data">
@@ -87,7 +87,7 @@
     </center>
 
     <p style="text-align: justify; line-height: 1.6;">
-        Selanjutnya, bagi peserta yang dinyatakan lulus <b>WAJIB</b> melakukan <b>Daftar Ulang</b> 
+        Selanjutnya, bagi peserta yang dinyatakan lulus <b>WAJIB</b> melakukan <b>Daftar Ulang</b> dan sertakan <b>Cetak Bukti Formulir Pendaftaran</b>
         mulai tanggal <b>{{ $activeYear ? \Carbon\Carbon::parse($activeYear->mulai_daftar_ulang)->format('d F Y') : '-' }}</b> 
         sampai dengan <b>{{ $activeYear ? \Carbon\Carbon::parse($activeYear->selesai_daftar_ulang)->format('d F Y') : '-' }}</b>.
     </p>
@@ -98,7 +98,7 @@
         <tr>
             <td width="60%"></td> 
             <td>
-                Sungai Karang, {{ date('d F Y') }}<br>
+                Madiun, {{ date('d F Y') }}<br>
                 Ketua Panitia PPDB,<br><br><br><br><br>
                 (_______________________)<br>
                 NIP. ...........................

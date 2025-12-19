@@ -136,22 +136,25 @@ public function index(Request $request)
         return redirect()->route('users.index')->with('success', 'Data peserta berhasil dihapus.');
     }
 
+    // DOWNLOAD PDF (FIX ERROR $USER)
     public function downloadRegistrationForm()
     {
-        // 1. Ambil Tahun Ajaran Aktif
+        $user = auth()->user();
+        
+        // 1. Ambil Field dari Admin & URUTKAN BERDASARKAN 'ORDER' (Urutan)
+        // Ini kuncinya agar nomor 1, 2, 3 di PDF ikut settingan Admin
+        $fields = \App\Models\FormField::where('is_active', 1)
+                    ->orderBy('order', 'asc') // Pastikan kolom di database admin namanya 'order' atau 'urutan'
+                    ->get();
+        
+        // 2. Ambil Dokumen
+        $documents = \App\Models\DocumentRequirement::where('is_active', 1)->get();
+        
+        // 3. Ambil Tahun Ajaran
         $academicYear = \App\Models\AcademicYear::where('is_active', 1)->first();
 
-        // 2. Ambil Field Formulir (Pertanyaan)
-        $fields = \App\Models\FormField::where('is_active', 1)
-                            ->orderBy('order', 'asc')
-                            ->get();
-
-        // 3. (BARU) AMBIL MASTER DOKUMEN DARI DATABASE
-        // Ini agar lampiran di PDF dinamis mengikuti Admin
-        $documents = \App\Models\DocumentRequirement::where('is_active', 1)->get();
-
-        // 4. Load View dengan membawa data $documents
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('user.print_registration', compact('academicYear', 'fields', 'documents'));
+        // Kirim ke View
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.print_registration', compact('user', 'fields', 'documents', 'academicYear'));
         
         return $pdf->stream('Formulir-PPDB.pdf');
     }
@@ -269,29 +272,91 @@ public function index(Request $request)
         return view('user.form_registration', compact('user'));
     }
 
-   public function updateProfile(Request $request)
+
+    public function updateProfile(Request $request)
     {
-    $user = auth()->user();
+        $user = auth()->user();
 
-    // 1. Validasi (Sesuaikan kebutuhan)
-    $request->validate([
-        'name' => 'required|string',
-        'nisn' => 'nullable|numeric',
-        // ... validasi lain ...
-    ]);
+        // 1. Update Nama di Akun Utama
+        if ($request->has('name')) {
+            $user->update(['name' => $request->name]);
+        }
 
-    // 2. Simpan Data Akun Utama (Nama di tabel users)
-    $user->update([
-        'name' => $request->name
-    ]);
+        // 2. Simpan Data Detail Siswa (MANUAL SATU PER SATU)
+        // Ini akan mencocokkan input form hijau Anda ke database
+        \App\Models\StudentDetail::updateOrCreate(
+            ['user_id' => $user->id], // Cari data berdasarkan User ID
+            [
+                // Kiri: Nama Kolom Database => Kanan: name="..." di Form HTML
+                'nisn'          => $request->nisn,
+                'nama_lengkap'  => $request->nama_lengkap,
+                'nik'           => $request->nik,
+                'jenjang'       => $request->jenjang,
+                'asal_sekolah'  => $request->asal_sekolah,
+                'tempat_lahir'  => $request->tempat_lahir,
+                'tanggal_lahir' => $request->tanggal_lahir,
+                'gender'        => $request->gender,
+                'agama'         => $request->agama,
+                'golongan_darah'=> $request->golongan_darah,
+                'kewarganegaraan'=> $request->kewarganegaraan,
+                'tempat_tinggal'=> $request->tempat_tinggal,
+                'alamat'        => $request->alamat,
+                
+                // Data Orang Tua
+                'nama_ayah'     => $request->nama_ayah,
+                'pendidikan_ayah'=> $request->pendidikan_ayah,
+                'pekerjaan_ayah'=> $request->pekerjaan_ayah,
+                'nama_ibu'      => $request->nama_ibu,
+                'pendidikan_ibu'=> $request->pendidikan_ibu,
+                'pekerjaan_ibu' => $request->pekerjaan_ibu,
+                'penghasilan_ortu'=> $request->penghasilan_ortu,
+                'no_hp'         => $request->no_hp,
 
-    // 3. Simpan Data Detail Siswa (Di tabel student_details)
-    // updateOrCreate: Jika belum ada data detail, buat baru. Jika sudah ada, update.
-    $user->studentDetail()->updateOrCreate(
-        ['user_id' => $user->id], // Kunci pencarian
-        $request->except(['_token', '_method', 'name', 'email']) // Data yang disimpan (kecuali token & data user utama)
-    );
+                // Afirmasi
+                'no_kkh'         => $request->no_kkh,
+                'no_kks'         => $request->no_kks,
+                'no_kip'         => $request->no_kip,
+                'no_kis'         => $request->no_kis,
+            ]
+        );
 
-    return redirect()->back()->with('success', 'Data biodata berhasil disimpan!');
+        return redirect()->back()->with('success', 'Data berhasil disimpan!');
     }
+    
+    // Fungsi 1: Saat Admin klik salah satu notifikasi
+    // ==========================================
+    // NOTIFIKASI (VERSI MANUAL / CUSTOM DB)
+    // ==========================================
+
+    public function markNotificationRead($id)
+    {
+        // Cari notifikasi berdasarkan ID dan pastikan milik user yang login
+        $notification = \App\Models\Notification::where('id', $id)
+                            ->where('user_id', auth()->id())
+                            ->first();
+
+        if($notification) {
+            // MANUAL UPDATE: Ubah kolom 'read' jadi 1 atau true
+            $notification->update(['read' => 1]); 
+            
+            // Cek jika ada link custom (optional, sesuaikan dengan kolom di DB Anda jika ada)
+            // Jika tidak ada kolom link, biarkan redirect back saja.
+            if (!empty($notification->link)) {
+                 return redirect($notification->link);
+            }
+        }
+
+        return redirect()->back();
+    }
+
+    public function markAllRead()
+    {
+        // Update semua notifikasi milik user ini yang belum dibaca
+        \App\Models\Notification::where('user_id', auth()->id())
+            ->where('read', 0)
+            ->update(['read' => 1]);
+
+        return redirect()->back()->with('success', 'Semua notifikasi telah ditandai sudah dibaca.');
+    }
+
 } // <--- Penutup Class (Jangan Dihapus)

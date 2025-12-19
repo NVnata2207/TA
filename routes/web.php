@@ -40,6 +40,10 @@ Route::get('/dashboard/user', [AuthController::class, 'userDashboard'])->name('d
 // --- MIDDLEWARE AUTH GROUP ---
 Route::middleware(['auth'])->group(function () {
 
+    // Pastikan menggunakan UserController::class
+    Route::get('/notification/read/{id}', [\App\Http\Controllers\UserController::class, 'markNotificationRead'])->name('notification.read');
+    Route::get('/notification/read-all', [\App\Http\Controllers\UserController::class, 'markAllRead'])->name('notification.readAll');
+
     // =========================================================================
     // BAGIAN PENTING: PENGATURAN FORMULIR (JANGAN DIUBAH LAGI)
     // =========================================================================

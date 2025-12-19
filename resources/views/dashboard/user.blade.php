@@ -141,15 +141,10 @@
                         <div>Pendaftaran</div>
                     </div>
                 </div>
-                @if($isLocked)
-                    <button class="btn btn-light btn-sm w-100 disabled" style="opacity: 0.7; cursor: not-allowed;">
-                        <i class="fas fa-lock"></i> Pendaftaran Selesai
-                    </button>
-                @else
-                    <a href="{{ route('user.downloadRegistrationForm') }}" class="btn btn-light btn-sm w-100" target="_blank">
-                        Download Formulir PDF <i class="fa fa-download"></i>
-                    </a>
-                @endif
+                {{-- GANTI JADI INI SAJA (TANPA IF-ELSE) --}}
+                <a href="{{ route('user.downloadRegistrationForm') }}" class="btn btn-light btn-sm w-100" target="_blank">
+                    Download Formulir PDF <i class="fa fa-download"></i>
+                </a>
             </div>
         </div>
     </div>

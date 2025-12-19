@@ -92,8 +92,11 @@ class User extends Authenticatable
     }
     
     // Relasi: Satu User punya Satu Detail Siswa
+    // File: app/Models/User.php
+
     public function studentDetail()
     {
-        return $this->hasOne(StudentDetail::class);
+        // Relasi: Satu User punya Satu Detail Siswa
+        return $this->hasOne(StudentDetail::class, 'user_id');
     }
 }

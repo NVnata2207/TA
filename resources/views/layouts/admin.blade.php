@@ -44,74 +44,76 @@
     <!-- Navbar -->
     <nav class="main-header navbar navbar-expand navbar-white navbar-light">
         <ul class="navbar-nav ml-auto w-100 justify-content-end align-items-center">
-            {{-- BAGIAN NOTIFIKASI (VERSI DESAIN CANTIK & MODERN) --}}
-            <li class="nav-item dropdown">
-                <a class="nav-link" href="#" id="alertsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                    <i class="far fa-bell fa-lg"></i>
-                    @php
-                        $unreadNotif = \App\Models\Notification::where('user_id', auth()->id())
-                                        ->where('read', false)
-                                        ->latest()->get();
-                    @endphp
-                    
-                    @if($unreadNotif->count() > 0)
-                        <span class="badge badge-danger navbar-badge">{{ $unreadNotif->count() }}</span>
-                    @endif
-                </a>
+            {{-- BAGIAN NOTIFIKASI (VERSI CUSTOM DB - AMAN DARI ERROR) --}}
+                <li class="nav-item dropdown">
+                    <a class="nav-link" href="#" id="alertsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="far fa-bell fa-lg"></i>   
+                        @php
+                            // PERBAIKAN: Gunakan Query Manual agar sesuai tabel Anda
+                            // Mencari notifikasi milik user yang 'read' = 0 (Belum dibaca)
+                            $unreadNotif = \App\Models\Notification::where('user_id', auth()->id())
+                                                ->where('read', 0) // Pastikan kolom di DB namanya 'read' atau 'is_read'
+                                                ->latest()
+                                                ->get();
+                        @endphp
+                        
+                        @if($unreadNotif->count() > 0)
+                            <span class="badge badge-danger navbar-badge">{{ $unreadNotif->count() }}</span>
+                        @endif
+                    </a>
 
-                {{-- Dropdown Menu dengan Border Radius & Shadow Halus --}}
-                <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0" aria-labelledby="alertsDropdown" style="width: 350px; border-radius: 12px; overflow: hidden;">
-                    
-                    {{-- 1. HEADER HIJAU --}}
-                    <li class="bg-success text-white p-3 d-flex justify-content-between align-items-center" style="background: #328E6E !important;">
-                        <h6 class="m-0 fw-bold">Notifikasi</h6>
-                        <span class="badge bg-white text-success rounded-pill">{{ $unreadNotif->count() }} Baru</span>
-                    </li>
-
-                    {{-- 2. LIST NOTIFIKASI --}}
-                    <div style="max-height: 400px; overflow-y: auto;">
-                        @forelse($unreadNotif as $notif)
-                            <li>
-                                <a class="dropdown-item d-flex align-items-start p-3 border-bottom" href="{{ $notif->link ?? '#' }}" style="white-space: normal; transition: background 0.2s;">
-                                    
-                                    {{-- Ikon Bulat Cantik --}}
-                                    <div class="flex-shrink-0 me-3">
-                                        <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; background-color: #e8f5e9;">
-                                            <i class="fas fa-info-circle text-success fa-lg"></i>
-                                        </div>
-                                    </div>
-
-                                    {{-- Konten Teks --}}
-                                    <div class="flex-grow-1">
-                                        <div class="d-flex justify-content-between align-items-center mb-1">
-                                            <span class="fw-bold text-dark" style="font-size: 0.9rem;">Info Sistem</span>
-                                            <small class="text-muted" style="font-size: 0.75rem;">{{ $notif->created_at->diffForHumans(null, true) }}</small>
-                                        </div>
-                                        
-                                        <p class="mb-0 text-secondary text-wrap" style="font-size: 0.85rem; line-height: 1.4;">
-                                            {{ $notif->message }}
-                                        </p>
-                                    </div>
-                                </a>
-                            </li>
-                        @empty
-                            <li class="p-4 text-center text-muted">
-                                <i class="far fa-bell-slash fa-3x mb-3 text-light"></i><br>
-                                <small>Tidak ada notifikasi baru</small>
-                            </li>
-                        @endforelse
-                    </div>
-
-                    {{-- 3. FOOTER --}}
-                    @if($unreadNotif->count() > 0)
-                        <li>
-                            <a class="dropdown-item text-center small text-success fw-bold py-2 bg-light" href="#">
+                    {{-- Dropdown Menu --}}
+                    <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0" aria-labelledby="alertsDropdown" style="width: 350px; border-radius: 12px; overflow: hidden;">
+                        
+                        {{-- 1. HEADER HIJAU --}}
+                        <li class=" text-white p-3 d-flex justify-content-between align-items-center" style="background: #328E6E !important;">
+                            <div>
+                                <h6 class="m-0 fw-bold">Notifikasi</h6>
+                            </div>
+                            {{-- Tombol Tandai Semua --}}
+                            <a href="{{ route('notification.readAll') }}" class="badge bg-white text-success rounded-pill text-decoration-none" style="cursor: pointer;">
                                 Tandai Semua Dibaca
                             </a>
                         </li>
-                    @endif
-                </ul>
-            </li>
+
+                        {{-- 2. LIST NOTIFIKASI --}}
+                        <div style="max-height: 400px; overflow-y: auto;">
+                            @forelse($unreadNotif as $notif)
+                                <li>
+                                    {{-- Link ke Route Read agar status berubah jadi 1 --}}
+                                    <a class="dropdown-item d-flex align-items-start p-3 border-bottom" href="{{ route('notification.read', $notif->id) }}" style="white-space: normal; transition: background 0.2s;">
+                                        
+                                        {{-- Ikon --}}
+                                        <div class="flex-shrink-0 me-3">
+                                            <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; background-color: #e8f5e9;">
+                                                <i class="fas fa-info-circle text-success fa-lg"></i>
+                                            </div>
+                                        </div>
+
+                                        {{-- Konten --}}
+                                        <div class="flex-grow-1">
+                                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                                <span class="fw-bold text-dark" style="font-size: 0.9rem;">Info Sistem</span>
+                                                <small class="text-muted" style="font-size: 0.75rem;">{{ $notif->created_at->diffForHumans() }}</small>
+                                            </div>
+                                            
+                                            {{-- PERBAIKAN: Panggil langsung kolom 'message' --}}
+                                            <p class="mb-0 text-secondary text-wrap" style="font-size: 0.85rem; line-height: 1.4;">
+                                                {{ $notif->message }}
+                                            </p>
+                                            <small class="text-primary" style="font-size: 0.7rem;">Klik untuk baca</small>
+                                        </div>
+                                    </a>
+                                </li>
+                            @empty
+                                <li class="p-4 text-center text-muted">
+                                    <i class="far fa-bell-slash fa-3x mb-3 text-light" style="color: #ccc !important;"></i><br>
+                                    <small>Tidak ada notifikasi baru</small>
+                                </li>
+                            @endforelse
+                        </div>
+                    </ul>
+                </li>
             <li class="nav-item d-flex align-items-center">
                 <span class="mr-2">{{ auth()->user()->name ?: 'Admin utama' }}</span>
                 <form method="POST" action="{{ route('logout') }}" class="d-inline">
