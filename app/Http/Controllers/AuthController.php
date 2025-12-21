@@ -89,13 +89,14 @@ public function showRegisterForm()
             return redirect()->route('login')->with('error', 'Kuota pendaftaran sudah habis.');
         }
 
-        // LOGIKA ADMIN
+        // === 1. LOGIKA ADMIN ===
         if ($request->role === 'admin') {
             $request->validate([
-                'nisn' => 'required|string|unique:users',
-                'password' => 'required|string|min:6|confirmed',
+                'nisn' => 'required|string|max:20|unique:users', // Tambah max:20
+                'password' => 'required|string|min:8|confirmed', // Ubah jadi min:8 biar lebih aman
                 'role' => 'required|in:admin,user',
             ]);
+
             $user = User::create([
                 'name' => 'Administrator',
                 'nisn' => $request->nisn,
@@ -106,37 +107,36 @@ public function showRegisterForm()
                 'status_pendaftaran' => 'Pendaftar Baru',
             ]);
 
-        // LOGIKA USER
-            } else {
-            // 1. Validasi Input Siswa
+        // === 2. LOGIKA USER (CALON SISWA) ===
+        } else {
+            // TERAPKAN VALIDASI KETAT DI SINI
             $request->validate([
                 'name' => 'required|string|max:255',
-                'email' => 'required|email|unique:users',
-                'nisn' => 'required|string|unique:users',
-                'password' => 'required|string|min:6|confirmed',
+                'email' => 'required|email|max:255|unique:users',
+                'nisn' => 'required|string|max:20|unique:users', // Wajib max 20 karakter
+                'password' => 'required|string|min:8|confirmed',  // Wajib minimal 8 karakter
                 'role' => 'required|in:admin,user',
-                
-                // Tambahan: Wajib pilih Jenjang (SD/SMP)
-                'jenjang_tambahan' => 'required', 
+                'jenjang_tambahan' => 'required|string',          // Wajib dipilih (SD/SMP)
             ]);
             
-            // 2. TRIK GABUNGKAN NAMA (Agar masuk database tanpa kolom baru)
-            // Contoh: Input "Budi" dan "SD" -> Disimpan jadi "Budi (SD)"
+            // TRIK GABUNGKAN NAMA (Agar masuk database tanpa error kolom baru)
+            // Jika Anda belum membuat kolom 'jenjang_tambahan' di database, pakai cara ini:
             $namaGabungan = $request->name . ' (' . $request->jenjang_tambahan . ')';
 
-            // 3. Simpan Data Siswa
+            // Simpan Data Siswa
             $user = User::create([
-                'name' => $namaGabungan, // <--- Simpan nama yang sudah digabung
+                'name' => $namaGabungan, // Nama disimpan sebagai "Budi (SD)"
                 'nisn' => $request->nisn,
                 'password' => Hash::make($request->password),
                 'role' => 'user',
                 'email' => $request->email,
                 'academic_year_id' => $academic_year_id,
                 'status_pendaftaran' => 'Pendaftar Baru',
+                // 'jenjang_tambahan' => $request->jenjang_tambahan, <--- Hapus komentar ini HANYA JIKA Anda sudah buat kolomnya di database
             ]);
         }
-        // 👆 BATAS AKHIR PERUBAHAN 👆
 
+        // Kurangi Kuota
         if ($activeYear && $activeYear->kuota !== null && $activeYear->kuota > 0) {
             $activeYear->decrement('kuota');
         }

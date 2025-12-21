@@ -46,7 +46,7 @@ class AnnouncementController extends Controller
             'title' => 'required|string|max:255',
             'content' => 'required|string',
             'type' => 'required|in:pembukaan,masa_pendaftaran,ditutup,biasa', // Hanya boleh pilih salah satu tipe ini.
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048', // Validasi gambar (maks 2MB).
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:10240', // Validasi gambar (maks 2MB).
             'show_on_login' => 'nullable|boolean',
         ];
 
@@ -113,12 +113,13 @@ class AnnouncementController extends Controller
      */
     public function update(Request $request, Announcement $announcement)
     {
+        // dd($request->all());
         // Definisi aturan dasar.
         $rules = [
             'title' => 'required|string|max:255',
             'content' => 'required|string',
             'type' => 'required|in:pembukaan,masa_pendaftaran,ditutup,biasa',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:10240',
             'show_on_login' => 'nullable|boolean',
         ];
 
